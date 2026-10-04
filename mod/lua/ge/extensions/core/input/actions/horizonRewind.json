@@ -1,0 +1,59 @@
+{
+  "horizonRewind_hold": {
+    "cat": "gameplay",
+    "order": 110,
+    "ctx": "tlua",
+    "onDown": "if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind.beginRewind() end",
+    "onUp": "if extensions.horizonRewind then extensions.horizonRewind.endRewind() end",
+    "title": "Horizon Rewind: hold to rewind",
+    "desc": "Hold to visibly rewind the player car, release to resume. History builds automatically. The normal recovery binding also works."
+  },
+  "horizonRewind_enable": {
+    "cat": "gameplay",
+    "order": 111,
+    "ctx": "tlua",
+    "onDown": "if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind.setEnabled(true) end",
+    "title": "Horizon Rewind: enable live rewind",
+    "desc": "Re-enable automatic live rewind after disabling it or an error. Normally enabled automatically in Freeroam."
+  },
+  "horizonRewind_disable": {
+    "cat": "gameplay",
+    "order": 112,
+    "ctx": "tlua",
+    "onDown": "if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind.setEnabled(false) end",
+    "title": "Horizon Rewind: disable live rewind",
+    "desc": "Stop live rewind and restore normal vehicle recovery."
+  },
+  "horizonRewind_cancel": {
+    "cat": "gameplay",
+    "order": 113,
+    "ctx": "tlua",
+    "onDown": "if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind.cancelRewind() end",
+    "title": "Horizon Rewind: cancel rewind",
+    "desc": "Cancel the current rewind and return to where it began."
+  },
+  "horizonRewind_speed1": {
+    "cat": "gameplay",
+    "order": 114,
+    "ctx": "tlua",
+    "onDown": "if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind.setSpeed(1) end",
+    "title": "Horizon Rewind: 1x speed",
+    "desc": "Set rewind playback to normal speed."
+  },
+  "horizonRewind_speed2": {
+    "cat": "gameplay",
+    "order": 115,
+    "ctx": "tlua",
+    "onDown": "if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind.setSpeed(2) end",
+    "title": "Horizon Rewind: 2x speed",
+    "desc": "Set rewind playback to double speed."
+  },
+  "horizonRewind_speed4": {
+    "cat": "gameplay",
+    "order": 116,
+    "ctx": "tlua",
+    "onDown": "if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind.setSpeed(4) end",
+    "title": "Horizon Rewind: 4x speed",
+    "desc": "Set rewind playback to quadruple speed."
+  }
+}

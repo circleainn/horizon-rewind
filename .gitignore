@@ -1,0 +1,7 @@
+dist/
+.test-user/
+.test-results/
+node_modules/
+tests/*.generated.lua
+paint-fix/
+__pycache__/

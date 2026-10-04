@@ -1,0 +1,20 @@
+{
+  "domElement": "<horizon-rewind></horizon-rewind>",
+  "name": "Horizon Rewind — Prototype",
+  "types": ["ui.apps.categories.vehicle_control", "ui.apps.categories.utility"],
+  "description": "Hold to visibly rewind your player car, then release to resume. Includes a saved rewind speed setting. Damage and supported effect-mod restoration are experimental.",
+  "css": {
+    "right": "28px",
+    "bottom": "50px",
+    "width": "360px",
+    "height": "180px",
+    "min-width": "320px",
+    "min-height": "180px"
+  },
+  "author": "circleainn",
+  "version": "0.1.0",
+  "directive": "horizonRewind",
+  "category": "Gameplay",
+  "isAuxiliary": false,
+  "interactive": "required"
+}

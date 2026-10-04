@@ -1,0 +1,70 @@
+<div class="hr-app" ng-class="{'hr-active': hr.phase === 'rewinding', 'hr-error': hr.phase === 'error'}">
+  <style>
+    .hr-app { box-sizing: border-box; width: 100%; height: 100%; min-width: 320px; overflow: auto; background: rgba(24,24,24,.94); color: #eee; font: 13px/1.4 Overpass,Roboto,"Segoe UI",Arial,sans-serif; user-select: none; }
+    .hr-app * { box-sizing: border-box; }
+    .hr-app button { margin: 0; border: 1px solid #555; border-radius: 2px; background: #383838; color: #eee; font: inherit; cursor: pointer; touch-action: none; }
+    .hr-app button:hover:not(:disabled) { background: #484848; border-color: #888; }
+    .hr-app button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .hr-app button:disabled { color: #999; background: #292929; border-color: #414141; cursor: default; }
+    .hr-app .hr-header { height: 33px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; background: #303030; border-bottom: 1px solid #111; }
+    .hr-app .hr-title { font-size: 14px; font-weight: 500; }
+    .hr-app .hr-subtitle { color: #aaa; font-size: 11px; }
+    .hr-app .hr-body { padding: 9px 10px 8px; }
+    .hr-app .hr-readout { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .hr-app .hr-status { color: #ccc; font-size: 12px; }
+    .hr-app .hr-seconds { font-size: 14px; font-variant-numeric: tabular-nums; }
+    .hr-app .hr-seconds small { color: #aaa; font-size: 11px; }
+    .hr-app .hr-timeline { position: relative; height: 5px; background: #505050; }
+    .hr-app .hr-history { position: absolute; top: 0; right: 0; bottom: 0; background: #f58220; }
+    .hr-app .hr-cursor { position: absolute; top: -3px; width: 2px; height: 11px; margin-left: -2px; background: #fff; }
+    .hr-app .hr-ticks { position: relative; height: 17px; margin-top: 3px; color: #aaa; font-size: 10px; font-variant-numeric: tabular-nums; }
+    .hr-app .hr-ticks span { position: absolute; top: 0; padding-top: 3px; white-space: nowrap; transform: translateX(-50%); }
+    .hr-app .hr-ticks span:first-child { left: 0; transform: none; }
+    .hr-app .hr-ticks span:nth-child(2) { left: 25%; }
+    .hr-app .hr-ticks span:nth-child(3) { left: 50%; }
+    .hr-app .hr-ticks span:nth-child(4) { left: 75%; }
+    .hr-app .hr-ticks span:last-child { left: 100%; transform: translateX(-100%); }
+    .hr-app .hr-ticks span::before { position: absolute; top: 0; left: 50%; height: 2px; width: 1px; background: #777; content: ""; }
+    .hr-app .hr-ticks span:first-child::before { left: 0; }
+    .hr-app .hr-ticks span:last-child::before { left: auto; right: 0; }
+    .hr-app .hr-actions { display: flex; align-items: stretch; gap: 5px; margin-top: 9px; }
+    .hr-app .hr-hold { display: flex; align-items: center; justify-content: center; gap: 7px; flex: 1; min-width: 0; height: 31px; padding: 0 7px; white-space: nowrap; }
+    .hr-app .hr-hold svg { flex-shrink: 0; width: 17px; height: 14px; fill: currentColor; }
+    .hr-app .hr-hold.hr-held { background: #f58220; border-color: #f58220; color: #151515; }
+    .hr-app .hr-hold.hr-held:hover { background: #ff963e; border-color: #ff963e; }
+    .hr-app .hr-cancel { padding: 0 8px; font-size: 12px; }
+    .hr-app .hr-speeds { display: flex; align-items: center; gap: 5px; margin-left: 3px; color: #ccc; font-size: 11px; }
+    .hr-app .hr-speed { width: 63px; height: 31px; padding: 0 3px; border: 1px solid #555; border-radius: 2px; background: #383838; color: #eee; font: 12px Overpass,Roboto,"Segoe UI",Arial,sans-serif; }
+    .hr-app .hr-speed:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .hr-app .hr-message { margin-top: 7px; color: #b7b7b7; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+    .hr-app.hr-active .hr-status { color: #ff963e; }
+    .hr-app.hr-error .hr-status, .hr-app.hr-error .hr-message { color: #ffae9d; }
+  </style>
+  <div class="hr-header">
+    <span class="hr-title" title="Horizon Rewind prototype · Player car only. Damage and supported effect-mod restoration are experimental. Traffic does not rewind.">Rewind</span>
+    <span class="hr-subtitle">Player car</span>
+  </div>
+  <div class="hr-body">
+    <div class="hr-readout">
+      <span class="hr-status">{{hrStatus()}}</span>
+      <span class="hr-seconds">{{(hr.phase === 'rewinding' || hr.phase === 'restoring' ? hr.rewindSeconds : hr.availableSeconds) | number:1}}<small> s {{hr.phase === 'rewinding' || hr.phase === 'restoring' ? 'back' : 'available'}}</small></span>
+    </div>
+    <div class="hr-timeline" role="img" ng-attr-aria-label="{{(hr.availableSeconds | number:1) + ' seconds available; ' + (hr.rewindSeconds | number:1) + ' seconds back'}}">
+      <div class="hr-history" ng-style="{'width': hrBuffer() + '%'}"></div>
+      <div class="hr-cursor" ng-style="{'left': (100 - hrBuffer() + hrBuffer() * hrPosition() / 100) + '%'}"></div>
+    </div>
+    <div class="hr-ticks" aria-hidden="true"><span>−{{hr.maxSeconds | number:0}} s</span><span>−{{hr.maxSeconds * .75 | number:0}}</span><span>−{{hr.maxSeconds * .5 | number:0}}</span><span>−{{hr.maxSeconds * .25 | number:0}}</span><span>Now</span></div>
+    <div class="hr-actions">
+      <button class="hr-hold" ng-class="{'hr-held': hrHeld || hr.phase === 'rewinding'}" type="button" ng-disabled="!hrCanRewind() &amp;&amp; !hrHeld &amp;&amp; hr.phase !== 'rewinding'" aria-label="Hold to rewind; release to resume" ng-attr-aria-pressed="{{hrHeld || hr.phase === 'rewinding'}}" title="Hold to rewind, release to drive. Press Escape while holding to cancel.">
+        <svg viewBox="0 0 20 16" aria-hidden="true" focusable="false"><path d="M9 2 1 8l8 6V2Zm9 0-8 6 8 6V2Z"/></svg>
+        <span>{{hr.phase === 'restoring' ? 'Restoring…' : hrHeld || hr.phase === 'rewinding' ? 'Release to drive' : 'Hold to rewind'}}</span>
+      </button>
+      <button class="hr-cancel" type="button" ng-click="hrCancel()" ng-disabled="hr.phase !== 'rewinding' &amp;&amp; !hrHeld" title="Return to where rewind began (Escape while holding)">Cancel</button>
+      <label class="hr-speeds" title="Rewind speed is remembered between sessions and also applies to the recovery key.">
+        <span>Speed</span>
+        <select class="hr-speed" aria-label="Rewind speed" ng-model="hr.speed" ng-options="speed as (speed + '×') for speed in hrSpeeds" ng-change="hrSetSpeed(hr.speed)"></select>
+      </label>
+    </div>
+    <div class="hr-message" role="status" aria-live="polite">{{hr.message || (hr.enabled ? 'Hold recovery to rewind; release to drive.' : 'Waiting for a singleplayer Freeroam vehicle.')}}</div>
+  </div>
+</div>
