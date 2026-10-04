@@ -1,4 +1,52 @@
-# Horizon Rewind — prototype 0.1.2
+# Horizon Rewind — prototype 0.1.3
+
+## 0.1.3 update
+
+Stock `autoTraffic` members no longer bound the player's history. The fleet
+records each member's available duration at begin, hides cars before that point,
+and returns those cars to their stock pool on commit. Cancel restores visibility.
+Unpooled/manual AI retains the conservative common-duration limit. Empty pooled
+members do not receive begin/seek commands. Native inactive objects are hidden
+automatically; visibility was checked again after reactivation.
+
+Same-VM traffic resets preserve history but start a new segment. Preview and
+release never interpolate across different reset segments, broken-beam bitmaps,
+or implausible world-position jumps. They use the earlier full frame at such
+boundaries. Ordinary continuous frames still interpolate. Reapplying an unchanged
+traffic toggle is idempotent. Opening Options does not clear history; changing
+history length deliberately does.
+
+Grime 2.0 uses a version/schema-gated VLua adapter, with a cached 10 Hz snapshot
+of node dirt/mud, soil state and window film. The existing Lua callbacks are
+gated during rewind/reset, and textures are rebuilt through Grime's existing
+canvas functions. Clean paint color/roughness are preserved. The own-canvas
+paint design must be active; guest canvases owned by other mods are unsupported.
+This is approximate reconstruction, not pixel history: deposit layering, mixed
+soil colors and separate window splashes are not reproduced. Burn state is not
+recorded. No third-party code/assets or material edits are distributed.
+
+Audio now uses `Engine.Audio.createSource('AudioGui', file)` and `setVolume`.
+The previous file emitter started at zero volume and used an event-parameter
+helper. File sources have no exposed `setPitch` method in 0.39; assigning a
+dynamic pitch property also has no native effect. Six locally generated cue
+variants provide the speed-dependent pitch without relying on that API. Sources
+repeat while held, fade on release, and are deleted on teardown.
+
+Validation on 2026-10-04: core specifications passed, including pooled births,
+visibility/cancel, same-VM resets, broken-topology boundaries and audio lifecycle.
+`run_collision_smoke.ps1` produced a real pickup/Covet collision (69 and 189
+broken beams), rewound both to rest, and resumed with zero broken beams and the
+original deformation counts. A late third car did not reduce history, returned
+to its pool on commit, and was visible when reactivated. This is a focused
+collision regression, not exhaustive traffic or third-party vehicle coverage.
+`run_compatibility_smoke.ps1` checked actual Grime clean/dirty preview, dirty
+cancellation and clean commit plus native audio-source creation. The isolated
+engine uses a null sound device; audible playback still needs a normal session.
+`run_grime_canvas_spec.ps1` rendered the installed body, roughness and glass JS
+in Edge: dirty pixels changed, rewind restored clean pixels/paint exactly, and
+reapplication restored visible dirt. It reads installed source into a temporary
+directory and never bundles it. Use `PLAYWRIGHT_MODULE` if Playwright is not in
+the normal Node search path.
 
 ## 0.1.2 update
 
@@ -121,7 +169,7 @@ BeamNG's saved-replay feature remains separate and unaffected. Live rewind is un
 
 **This is not yet a complete Forza-quality visual damage rewind.** Node geometry moves backward while held, but broken mesh connections, hidden/detached props and other damage visuals are rebuilt on release. Those transitions may pop. Release uses the exact interpolated node pose and velocity; discrete controller and damage topology state uses the preceding recorded sample.
 
-Stock engine particles, skid marks, sound playback, traffic, missions, timers, AI decisions and the rest of the world do not rewind. Supported effect mods are covered separately below. Other vehicles remain at their current positions while the simulation is paused. Use open space for initial testing.
+Stock engine particles, skid marks, recorded game audio, missions, timers, AI decisions and the rest of the world do not rewind. Traffic physical rewind is optional. Supported effect mods are covered separately below. Untracked vehicles remain at their current positions while the simulation is paused.
 
 Thermal state, all mechanical failures, tire pressure, every controller's private data and third-party vehicle behavior are not fully snapshotted. A reset may repair unsupported subsystems, including when cancelling. This is intended for single-player Freeroam experimentation, not career, missions, competitive timing or multiplayer. Exact engine determinism is not claimed.
 

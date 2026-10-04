@@ -1,6 +1,6 @@
 # Horizon Rewind
 
-**by circleainn · Experimental 0.1.2 · BeamNG.drive 0.39.4.0**
+**by circleainn · Experimental 0.1.3 · BeamNG.drive 0.39.4.0**
 
 Hold your vehicle recovery control to rewind your car. Release to drive again.
 Horizon Rewind records 20 seconds of player-car history automatically in singleplayer Freeroam. Longer history and traffic rewind are optional.
@@ -29,9 +29,12 @@ cannot change during rewind.
 
 Traffic rewind records the physical state of currently active AI traffic cars,
 including position, deformation, wheels and momentum, and resumes the group
-together. Available rewind time is limited to the history shared by all tracked
-cars. Newly spawned, reset or recycled cars start a fresh buffer. Deleted cars
-are not recreated, and parked cars outside the traffic AI system are not recorded.
+together. Newly spawned or recycled stock traffic no longer shortens your car's
+history. Rewinding past a car's recorded arrival hides it; releasing there returns
+it to the traffic pool for a later safe spawn. Same-vehicle traffic repairs retain
+their older history. Custom/manual AI outside the stock traffic pool still limits
+rewind to shared history. Deleted cars are not recreated, and parked cars outside
+the traffic AI system are not recorded.
 Traffic AI replans from its restored pose; police pursuits, traffic lights and
 other world logic are not rewound.
 
@@ -82,8 +85,14 @@ These integrations activate automatically for supported versions and data layout
 | Tire Impact Punctures 1.4 | Supported pressure and puncture state |
 | Dynamic Damage Particles 2.0 | Player-owned Lua debris, including flying glass shards, and sparks |
 | Fluid Spill Mod 1.3.0 | Sampled fluid effects and supported reservoir state |
+| Grime 2.0 | Recorded panel dirt/mud and window film with Grime paint selected |
 
 Fluid Spill combines effects without retaining vehicle ownership, so its integration rewinds **world fluid state**, including fluid left by other cars. Unknown compatibility layouts remain inactive. Full limits are documented in the development notes.
+
+Grime's textures are rebuilt from recorded buildup. Individual speckles and mixed
+soil colors are approximate; separate window splashes and burn marks are not
+rewound. Grime paint and its own texture canvas must be active. The integration
+does not alter paint materials or require installing Grime.
 
 ## Build
 

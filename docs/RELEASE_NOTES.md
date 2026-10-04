@@ -1,3 +1,27 @@
+# Horizon Rewind 0.1.3
+
+Experimental update by circleainn for BeamNG.drive 0.39.4.0.
+
+- Newly spawned/recycled stock traffic no longer truncates your rewind window.
+  Cars absent at the chosen time disappear and return to their traffic pool on
+  release. Same-vehicle traffic repairs retain older history. Custom/manual AI
+  outside the stock pool still uses the shortest shared history.
+- Prevented interpolation across resets, large teleports and changes in broken
+  beams, avoiding inconsistent geometry at those transitions.
+- Reapplying the current traffic setting no longer restarts traffic recording.
+- Added automatic Grime 2.0 compatibility for panel dirt/mud and window film.
+  Requires Grime paint and its own canvas. Rebuilt patterns/colors are approximate;
+  separate window splashes and burn marks are not rewound. No Grime files are changed.
+- Replaced the silent emitter path with directly controlled UI audio. Original
+  cue variants provide pitch changes for every rewind speed.
+
+A native two-car collision check restored both cars without new broken beams,
+and verified that late traffic preserves history and returns to its pool. Grime
+preview/cancel/commit and canvas checks passed. These checks use no rendered
+driving or audible output; damage restoration remains experimental.
+
+Download **horizon_rewind_circleainn.zip** and keep only one installed copy.
+
 # Horizon Rewind 0.1.2
 
 Experimental update by circleainn for BeamNG.drive 0.39.4.0.

@@ -752,4 +752,12 @@ test('traffic acknowledgments gate preview and release of the world pause', func
   eq(h.paused,true)
   ready=true;h.tick();eq(h.paused,false)
 end)
+test('reapplying the current traffic setting leaves recorded history attached',function()
+  local h=harness(false,'freeroam',{trafficEnabled=true})
+  local configured=0
+  h.env.extensions.horizonRewindTraffic={configure=function() configured=configured+1 end}
+  h.record();h.mod.setTrafficEnabled(true)
+  eq(configured,0)
+  h.mod.setTrafficEnabled(false);eq(configured,1)
+end)
 print('coordinator_spec: ' .. passed .. ' tests passed')

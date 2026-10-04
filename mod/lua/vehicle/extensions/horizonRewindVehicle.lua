@@ -17,6 +17,7 @@ local detachedRestore = false
 local pendingConfiguration
 local sampleInterval, maxSeconds = 0.05, 20
 local trafficVehicle = false
+local historySegment = 0
 local scratch = vec3()
 local completeRestore
 local resetCallback
@@ -104,6 +105,11 @@ end
 local function transmission(method, ...)
   local extension = type(extensions) == 'table' and rawget(extensions, 'horizonRewindTransmission')
   return type(extension) == 'table' and optionalCall(extension[method], ...) or nil
+end
+
+local function dirt(method, ...)
+  local extension = type(extensions)=='table' and rawget(extensions,'horizonRewindDirt')
+  return type(extension)=='table' and optionalCall(extension[method],...) or nil
 end
 
 local function removeResetCallback()
@@ -240,7 +246,7 @@ end
 local function snapshot()
   local pos = obj:getPosition()
   local velocity = optionalCall(obj.getVelocity, obj)
-  local f = {time = clock, origin = {pos.x, pos.y, pos.z}, rotation = captureRotation(),
+  local f = {time = clock, segment = historySegment, origin = {pos.x, pos.y, pos.z}, rotation = captureRotation(),
     velocity = velocity and {velocity.x, velocity.y, velocity.z} or nil,
     nodes = ffi.new('float[?]', #nodeIds * 7),
     beams = ffi.new('float[?]', #beamIds * 2),
@@ -248,7 +254,7 @@ local function snapshot()
     hydros = {}, devices = {}, storage = {},
     controllers = optionalState(controller),
     powertrain = optionalState(powertrain), fluidState = fluids('capture'), tireState = tires('capture'),
-    localCouplers = captureLocalCouplers(), materialState = materials('capture'), transmissionState = transmission('capture')}
+    localCouplers = captureLocalCouplers(), materialState = materials('capture'), transmissionState = transmission('capture'), dirtState = dirt('capture')}
   for i, cid in ipairs(nodeIds) do
     local p, velocity = obj:getNodePosition(cid), obj:getNodeVelocityVector(cid)
     local k = (i - 1) * 7
@@ -278,6 +284,7 @@ local function snapshot()
   for name, storage in pairs(storages()) do
     if type(storage) == 'table' and type(storage.storedEnergy) == 'number' then f.storage[name] = storage.storedEnergy end
   end
+  f.topology = ffi.string(f.broken, #beamIds)
   if trafficVehicle and type(ai) == 'table' then
     -- getState returns the whole AI module, including functions. Only copy the
     -- public driving options; route planning restarts at the restored pose.
@@ -319,6 +326,7 @@ local function fail(err)
   enabled, phase = false, 'error'
   effects('abort')
   tires('abort')
+  dirt('abort')
   notify('error', {message = tostring(err)})
 end
 
@@ -336,6 +344,7 @@ local function configure(token, active, seconds, isTraffic)
   fluids('setRewinding', false)
   effects('abort')
   tires('abort')
+  dirt('abort')
   session = token
   enabled, phase = active == true, active and 'recording' or 'disabled'
   if seconds == 20 or seconds == 40 or seconds == 60 then maxSeconds = seconds end
@@ -367,17 +376,35 @@ local function begin(token)
   fluids('setRewinding', true)
   effects('begin')
   tires('begin', liveFrame.tireState)
+  dirt('begin')
   notify('began', {availableSeconds = available()})
+end
+
+local function bracket(time)
+  local a,b,alpha=history:bracket(time)
+  if a==b or alpha==0 then return a,b,alpha end
+  local discontinuous=a.segment~=b.segment or a.topology~=b.topology
+  local distance,speed2=0,0
+  for axis=1,3 do
+    distance=distance+(b.origin[axis]-a.origin[axis])^2
+    speed2=speed2+((a.velocity and a.velocity[axis]) or 0)^2
+  end
+  -- Never blend a teleport/reset or a change in broken-beam topology into an
+  -- invented physical car. The earlier intact frame remains intact.
+  local maxTravel=2+math.sqrt(speed2)*math.max(0,b.time-a.time)*2
+  if discontinuous or distance>maxTravel*maxTravel then return a,a,0 end
+  return a,b,alpha
 end
 
 local function seek(token, secondsAgo)
   if token ~= session or phase ~= 'rewinding' then return end
   local amount = math.max(0, math.min(available(), tonumber(secondsAgo) or 0))
   cursor = history:latest().time - amount
-  local a, b, alpha = history:bracket(cursor)
+  local a, b, alpha = bracket(cursor)
   applyGeometry(a, b, alpha)
   tires('preview', a.tireState)
   materials('apply', a.materialState)
+  dirt('preview', a.dirtState)
   local pos = obj:getPosition()
   notify('previewed', {rewindSeconds = amount, position = {pos.x, pos.y, pos.z}})
 end
@@ -385,7 +412,7 @@ end
 -- The release pose must be exactly the pose that was shown, rather than the
 -- preceding 20 Hz sample. Discrete controller/topology state uses that sample.
 local function frameAt(time)
-  local a, b, alpha = history:bracket(time)
+  local a, b, alpha = bracket(time)
   if a == b or alpha == 0 then return a end
   local f = {}
   for key, value in pairs(a) do f[key] = value end
@@ -501,9 +528,11 @@ completeRestore = function(token, atomicReset)
   fluids('restore', f.fluidState)
   tires('restore', f.tireState)
   materials('apply', f.materialState)
+  dirt('restore', f.dirtState)
   fluids('setRewinding', false)
   effects('finish')
   tires('finish')
+  dirt('finish')
   impulseFrame = f
   if not restoreCancel then
     history:truncateAfter(f.time)
@@ -601,13 +630,19 @@ local function onReset()
     if detachedRestore then queueDetachedRestore() else notify('resetReady') end
     return
   end
-  history:clear()
+  -- Traffic can reset itself after a collision without changing its VM or
+  -- node layout. Keep its pre-impact frames; otherwise one AI repair cuts the
+  -- entire group's shared history to zero. Player recovery still starts fresh.
+  local retain = trafficVehicle and enabled and phase == 'recording'
+  historySegment=historySegment+1
+  if not retain then history:clear(); clock = 0 end
   preparedForReset = false
   tires('abort')
-  clock, accumulator = 0, 0
+  dirt(retain and 'finish' or 'abort')
+  accumulator = 0
   cursor, liveFrame, restoreFrame, impulseFrame = nil, nil, nil, nil
   phase = enabled and 'recording' or 'disabled'
-  notify('reset', {availableSeconds = 0})
+  notify(retain and 'recording' or 'reset', {availableSeconds = available()})
 end
 
 M.configure = function(...) protected(configure, ...) end
@@ -621,6 +656,6 @@ M.updateGFX = function(...) protected(updateGFX, ...) end
 M.onPhysicsStep = function(...) protected(onPhysicsStep, ...) end
 M.onReset = onReset
 M.onSerialize = function() return {} end -- Never serialize the live FFI buffer.
-M.onDeserialized = function() removeResetCallback(); fluids('setRewinding', false); effects('abort'); tires('abort'); enabled, phase = false, 'disabled'; history:clear() end
-M.onExtensionUnloaded = function() removeResetCallback(); fluids('setRewinding', false); effects('abort'); tires('abort'); enabled = false; history:clear() end
+M.onDeserialized = function() removeResetCallback(); fluids('setRewinding', false); effects('abort'); tires('abort'); dirt('abort'); enabled, phase = false, 'disabled'; history:clear() end
+M.onExtensionUnloaded = function() removeResetCallback(); fluids('setRewinding', false); effects('abort'); tires('abort'); dirt('abort'); enabled = false; history:clear() end
 return M

@@ -77,7 +77,7 @@
       <label class="hr-traffic-option"><input type="checkbox" ng-model="hr.trafficEnabled" ng-change="hrSetTraffic()" ng-disabled="hrOptionsLocked()">Rewind active traffic</label>
       <label class="hr-traffic-option"><input type="checkbox" ng-model="hr.audioEnabled" ng-change="hrSetAudio()">Rewind sound effect</label>
       <p class="hr-option-note">Longer history uses more memory. Traffic adds recording and restore work for each car. Changing history length clears the buffer.</p>
-      <p class="hr-option-note" ng-show="hr.trafficEnabled">Recycled traffic limits the shared history.</p>
+      <p class="hr-option-note" ng-show="hr.trafficEnabled">Newly spawned traffic won't shorten your history.</p>
     </div>
     <div ng-show="!hrOptionsOpen">
     <div class="hr-readout">

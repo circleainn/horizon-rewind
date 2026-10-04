@@ -5,7 +5,8 @@ local members, playerId, seconds, serial = {}, nil, 20, 1000000
 local enabled, operation, fault = false, nil, nil
 local hooks = {}
 local scanClock = 0
-local loadVehicle = "extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindMaterials'); extensions.load('horizonRewindTransmission'); extensions.load('horizonRewindVehicle'); "
+local cancelled = false
+local loadVehicle = "extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindMaterials'); extensions.load('horizonRewindTransmission'); extensions.load('horizonRewindDirt'); extensions.load('horizonRewindVehicle'); "
 
 local function bundle(id)
   return core_vehicle_manager and core_vehicle_manager.getVehicleData(id)
@@ -15,6 +16,19 @@ local function carFor(id, member)
   local car = be:getObjectByID(id)
   if not car or (member.bundle and bundle(id) ~= member.bundle) then return nil end
   return car
+end
+
+local function poolFor(id)
+  local manager=core_vehicleActivePooling
+  local pool=manager and manager.getPoolOfVeh and manager.getPoolOfVeh(id)
+  -- Only stock traffic pools can safely recycle a car absent at the selected
+  -- time. Custom/manual AI without a pool retains the conservative limit.
+  return pool and pool.name=='autoTraffic' and pool or nil
+end
+
+local function showOriginal(id,member)
+  local car=carFor(id,member)
+  if car and member.originalHidden~=nil then car:setHidden(member.originalHidden) end
 end
 
 local function queue(id, member, method, args)
@@ -60,7 +74,7 @@ local function freezeTraffic()
 end
 
 function M.abort()
-  for id, member in pairs(members) do queue(id, member, 'abort') end
+  for id, member in pairs(members) do showOriginal(id,member);queue(id, member, 'abort') end
   members, operation, fault = {}, nil, nil
   unhook()
 end
@@ -84,7 +98,7 @@ function M.update(dt)
       local car = carFor(id, member)
       if not car or not be:getObjectActive(id) then
         -- No history can be restored into a different or inactive vehicle.
-        if car then queue(id, member, 'abort') end
+        if car then showOriginal(id,member); queue(id, member, 'abort') end
         members[id] = nil
       elseif member.pending == 'visible' then
         local p, wanted = car:getPosition(), member.restored.position
@@ -109,7 +123,7 @@ function M.update(dt)
       local car = be:getObjectByID(id)
       if car then
         serial = serial+1
-        local member = {token=serial, bundle=bundle(id), available=0}
+        local member = {token=serial, bundle=bundle(id), available=0, pool=poolFor(id)}
         members[id] = member
         car:queueLuaCommand(loadVehicle..'extensions.horizonRewindVehicle.configure('..serial..',true,'..seconds..',true)')
       end
@@ -121,7 +135,7 @@ function M.status(limit)
   local count = 0
   for _, member in pairs(members) do
     count = count+1
-    limit = math.min(limit, member.available)
+    if not member.pool then limit = math.min(limit, member.available) end
   end
   return limit, count, fault
 end
@@ -129,10 +143,18 @@ end
 function M.begin()
   if not enabled then return end
   operation, fault = 'rewinding', nil
+  cancelled=false
   freezeTraffic()
   for id, member in pairs(members) do
-    member.pending = 'began'
-    queue(id, member, 'begin')
+    local car=carFor(id,member)
+    member.originalHidden=car and car:isHidden() or false
+    member.historyAtBegin=member.available
+    member.beforeBirth,member.restored,member.pending=false,nil,nil
+    member.noHistory=member.pool and member.available<0.1
+    if not member.noHistory then
+      member.pending = 'began'
+      queue(id, member, 'begin')
+    end
   end
 end
 
@@ -144,27 +166,45 @@ end
 
 function M.seek(amount)
   for id, member in pairs(members) do
-    member.pending = 'previewed'
-    queue(id, member, 'seek', string.format('%.9g', amount))
+    local car=carFor(id,member)
+    member.beforeBirth=member.pool and amount>member.historyAtBegin
+    if car then car:setHidden(member.originalHidden or member.beforeBirth==true) end
+    if not member.noHistory then
+      member.pending = 'previewed'
+      queue(id, member, 'seek', string.format('%.9g', amount))
+    end
   end
 end
 
 function M.finish(cancel)
   if not enabled then return end
   operation = 'restoring'
+  cancelled=cancel==true
   for id, member in pairs(members) do
-    member.pending = 'restorePrepared'
-    queue(id, member, 'finish', tostring(cancel == true))
+    if cancelled then showOriginal(id,member) end
+    if not member.noHistory then
+      member.pending = 'restorePrepared'
+      queue(id, member, 'finish', tostring(cancel == true))
+    end
   end
 end
 
 function M.commit()
   for id, member in pairs(members) do
     local car, data = carFor(id, member), member.restored
-    if car and data and data.velocity then
+    if car and member.beforeBirth and not cancelled then
+      -- This car had not joined this timeline. Return it to the stock pool;
+      -- traffic can spawn it at a safe road position instead of leaving a
+      -- future car overlapping a restored one. No vehicles are deleted.
+      queue(id,member,'abort')
+      member.pool:setVeh(id,false)
+      showOriginal(id,member)
+      members[id]=nil
+    elseif car and data and data.velocity then
       local v = data.velocity
       car:applyClusterVelocityScaleAdd(car:getRefNodeId(), 0, v[1], v[2], v[3])
     end
+    showOriginal(id,member)
     member.restored, member.pending = nil, nil
   end
   operation = nil

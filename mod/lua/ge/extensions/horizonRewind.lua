@@ -173,7 +173,7 @@ local function attach(car)
   effectsCall('configure', vehicleId, session, maxSeconds)
   trafficCall('configure', vehicleId, trafficEnabled, maxSeconds)
   phase, message = 'recording', 'Hold your recovery control to rewind.'
-  car:queueLuaCommand("extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindMaterials'); extensions.load('horizonRewindTransmission'); extensions.load('horizonRewindVehicle'); extensions.horizonRewindVehicle.configure("..session..',true,'..maxSeconds..')')
+  car:queueLuaCommand("extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindMaterials'); extensions.load('horizonRewindTransmission'); extensions.load('horizonRewindDirt'); extensions.load('horizonRewindVehicle'); extensions.horizonRewindVehicle.configure("..session..',true,'..maxSeconds..')')
   car:queueLuaCommand("extensions.load('horizonRewindRecovery'); extensions.horizonRewindRecovery.configure("..session..',true)')
   publish()
 end
@@ -289,11 +289,12 @@ end
 local function setTrafficEnabled(value)
   if type(value) ~= 'boolean' then return end
   if phase == 'rewinding' or phase == 'restoring' or recoveryHeld or recoveryPending then return end
+  if trafficEnabled == value and enabled then publish(); return end
   trafficEnabled = value
   failedVehicleId, failedBundle = nil, nil
   saveSettings()
   trafficCall('configure', vehicleId, enabled and trafficEnabled, maxSeconds)
-  message = value and 'Traffic rewind enabled. Waiting for shared history.' or 'Rewinding the player car only.'
+  message = value and 'Traffic rewind enabled.' or 'Rewinding the player car only.'
   publish()
 end
 

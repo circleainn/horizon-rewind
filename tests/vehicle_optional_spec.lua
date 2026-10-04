@@ -202,4 +202,30 @@ test('20 40 and 60 second buffers retain and seek their selected window',functio
     assert(math.abs(events.previewed.rewindSeconds-seconds)<.1,'Long history could not be sought')
   end
 end)
+test('a same-VM traffic reset retains its older history without interpolating through reset',function()
+  local _,env,state,module,events=fixture()
+  module.configure(1,true,20,true)
+  for _=1,40 do module.updateGFX(.05) end
+  local before=events.recording.availableSeconds
+  module.onReset()
+  assert(events.recording.availableSeconds==before,'Traffic reset erased shared history')
+  state.nodes={vector(20,0,0),vector(21,0,0)}
+  module.updateGFX(.05);module.begin(1);module.seek(1,.025)
+  assert(state.nodes[1].x==0 and state.nodes[2].x==1,'Geometry interpolated across reset')
+  module.seek(1,1.5)
+  assert(events.previewed.rewindSeconds>1.4)
+end)
+test('player resets still clear history',function()
+  local _,_,_,module,events=fixture()
+  module.updateGFX(1);module.onReset()
+  assert(events.reset.availableSeconds==0)
+end)
+test('broken beam transition never blends intact geometry with a crashed shape',function()
+  local _,env,state,module,events=fixture()
+  state.broken=true;state.nodes={vector(50,0,0),vector(-10,0,0)}
+  module.updateGFX(.1);module.begin(1);module.seek(1,.025)
+  assert(state.nodes[1].x==0 and state.nodes[2].x==1,'Crash geometry blended into intact topology')
+  module.finish(1,false);module.executeRestore(1);module.onReset();module.completeRestore(1)
+  assert(not state.broken and state.nodes[2].x==1,'Release restored inconsistent beam state')
+end)
 print('VEHICLE_OPTIONAL_SPEC_DONE '..count)

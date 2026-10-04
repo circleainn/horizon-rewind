@@ -1,5 +1,5 @@
 local function fixture()
-  local h={cars={},bundles={},traffic={},calls={},tokens={},updates=0,resets=0}
+  local h={cars={},bundles={},traffic={},calls={},tokens={},updates=0,resets=0,pools={}}
   function h.add(id)
     local car={active=true,p={x=0,y=0,z=0}}
     function car:queueLuaCommand(cmd)
@@ -10,6 +10,8 @@ local function fixture()
     end
     function car:getRefNodeId() return 0 end
     function car:getPosition() return self.p end
+    function car:isHidden() return self.hidden or false end
+    function car:setHidden(value) self.hidden=value end
     function car:setClusterPosRelRot(_,x,y,z) self.p={x=x,y=y,z=z} end
     function car:setOriginalTransform(...) self.baseline={...} end
     function car:resetBrokenFlexMesh() self.meshReset=true end
@@ -22,6 +24,7 @@ local function fixture()
     be={getObjectByID=function(_,id) return h.cars[id] end,
       getObjectActive=function(_,id) return h.cars[id] and h.cars[id].active end},
     core_vehicle_manager={getVehicleData=function(id) return h.bundles[id] end},
+    core_vehicleActivePooling={getPoolOfVeh=function(id) return h.pools[id] end},
     gameplay_traffic={getTrafficData=function() return h.traffic end,
       onUpdate=function() h.updates=h.updates+1 end,
       onVehicleResetted=function() h.resets=h.resets+1 end},
@@ -84,5 +87,28 @@ test('abort removes owned wrappers without erasing later wrappers',function()
   h.mod.abort();assert(h.env.gameplay_traffic.onUpdate==later)
   h.env.gameplay_traffic.onUpdate();assert(h.updates==1)
   local _,count=h.mod.status(20);assert(count==0)
+end)
+test('new pooled cars cannot shrink player history and cancel restores visibility',function()
+  local h=fixture()
+  h.pools[2],h.pools[3]={name='autoTraffic'},{name='autoTraffic'}
+  h.start();h.send(3,'recording',{availableSeconds=0})
+  assert(h.mod.status(50)==50,'New pooled traffic shortened player history')
+  local before=#h.calls;h.mod.begin()
+  assert(#h.calls==before+1 and h.calls[#h.calls].id==2,'Empty traffic received begin')
+  h.send(2,'began');assert(h.mod.ready())
+  h.mod.seek(8);h.send(2,'previewed',{})
+  assert(h.cars[2].hidden and h.cars[3].hidden,'Future traffic remained visible')
+  h.mod.finish(true)
+  assert(not h.cars[2].hidden and not h.cars[3].hidden,'Cancel left traffic hidden')
+  h.mod.abort();assert(not h.cars[3].hidden)
+end)
+test('traffic absent at selected time returns to its pool instead of overlapping restored cars',function()
+  local h=fixture();h.cars[3].active=false
+  h.pools[2]={name='autoTraffic',setVeh=function(_,id,active) h.cars[id].active=active end}
+  h.start();h.send(2,'recording',{availableSeconds=0})
+  h.mod.begin();h.mod.seek(4);assert(h.mod.ready())
+  h.mod.finish(false);h.mod.commit()
+  assert(not h.cars[2].active and not h.cars[2].hidden)
+  local available,count=h.mod.status(40);assert(available==40 and count==0)
 end)
 print('TRAFFIC_SPEC_DONE '..n)

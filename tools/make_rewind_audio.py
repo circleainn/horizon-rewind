@@ -31,3 +31,20 @@ with wave.open(str(path), 'wb') as out:
     out.setparams((1, 2, rate, 0, 'NONE', 'not compressed'))
     out.writeframes(b''.join(struct.pack('<h', round(v * 32767)) for v in frames))
 print(path)
+
+# The game's file-source API cannot change pitch after creation. Bake the
+# supported playback speeds at a standard sample rate instead.
+for speed, suffix in [(0.25, '025'), (0.5, '050'), (2, '200'), (4, '400'), (8, '800')]:
+    pitch = max(0.5, min(2, speed ** 0.35))
+    samples = []
+    for i in range(int(len(frames) / pitch)):
+        position = i * pitch
+        left = int(position)
+        fraction = position - left
+        value = frames[left] * (1 - fraction) + frames[min(left + 1, len(frames) - 1)] * fraction
+        samples.append(struct.pack('<h', round(value * 32767)))
+    target = path.with_name(f'rewind_{suffix}.wav')
+    with wave.open(str(target), 'wb') as out:
+        out.setparams((1, 2, rate, 0, 'NONE', 'not compressed'))
+        out.writeframes(b''.join(samples))
+    print(target)
