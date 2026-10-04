@@ -36,7 +36,7 @@ local function update(dtReal,dtSim)
     end
   elseif stage=='ready' then
     if timer<3 or not last.recording then return end
-    command("extensions.load('horizonRewindDriveProbe'); extensions.horizonRewindDriveProbe.start()")
+    command("extensions.load('horizonRewindDriveProbe'); extensions.horizonRewindDriveProbe.start('"..(HR_DRIVE_BEHAVIOR or 'arcade').."')")
     advance('drive')
   elseif stage=='drive' then
     if timer<7 then return end
@@ -47,8 +47,12 @@ local function update(dtReal,dtSim)
     if coast then command('input.event("throttle",0,1)') end
     command('recovery.stopRecovering(0)');advance('resume')
   elseif stage=='resume' then
+    if data.transmission then
+      if not data.transmission.ok then finish(false,'Transmission state diverged at restore: '..dumps(data.transmission));return end
+    end
     velocityTrace[#velocityTrace+1]={time=timer,speed=car:getVelocity():length(),paused=simTimeAuthority.getPause()}
     if data.trace then
+      if not data.transmission then finish(false,'Transmission callback missing: '..dumps(data['adapter-start']));return end
       if (data.live.speed or 0)<5 then finish(false,'Vehicle failed to accelerate before rewind');return end
       local minimum=math.huge
       for _,sample in ipairs(data.trace) do

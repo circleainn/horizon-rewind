@@ -1,4 +1,4 @@
-param([string]$GameRoot='C:\Steam\steamapps\common\BeamNG.drive',[string]$Model='bastion',[switch]$WithDirt,[switch]$Coast)
+param([string]$GameRoot='C:\Steam\steamapps\common\BeamNG.drive',[string]$Model='bastion',[switch]$WithDirt,[switch]$Coast,[ValidateSet('arcade','realistic')][string]$Behavior='arcade')
 $ErrorActionPreference='Stop'
 if($Model -notmatch '^[a-zA-Z0-9_]+$') {throw 'Invalid vehicle model'}
 $workspace=Split-Path -Parent $PSScriptRoot
@@ -13,7 +13,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'horizonRewindDriveProbe.lua') -
 $script=Join-Path $modRoot 'scripts/horizonRewindDriveSmoke'
 New-Item -ItemType Directory -Path $script -Force | Out-Null
 $coastLiteral=if($Coast){'true'}else{'false'}
-[IO.File]::WriteAllText((Join-Path $script 'modScript.lua'),("HR_DRIVE_MODEL='$Model';HR_DRIVE_COAST=$coastLiteral;extensions.load('horizonRewindDriveSmoke')"),[Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText((Join-Path $script 'modScript.lua'),("HR_DRIVE_MODEL='$Model';HR_DRIVE_COAST=$coastLiteral;HR_DRIVE_BEHAVIOR='$Behavior';extensions.load('horizonRewindDriveSmoke')"),[Text.UTF8Encoding]::new($false))
 if($WithDirt){$repo=Join-Path $current 'mods/repo';New-Item -ItemType Directory -Path $repo -Force | Out-Null;Copy-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'BeamNG/BeamNG.drive/current/mods/repo/whytey_grime_dynamic_dirt.zip') -Destination $repo}
 Write-Output "Drive test: $userRoot"
 $process=Start-Process -FilePath (Join-Path $GameRoot 'Bin64/BeamNG.drive.x64.exe') -WorkingDirectory $GameRoot -ArgumentList @('-userpath',$userRoot,'-headless','-level','smallgrid','-gfx','null','-noui') -WindowStyle Hidden -PassThru

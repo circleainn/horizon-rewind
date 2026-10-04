@@ -1,6 +1,6 @@
 # Horizon Rewind
 
-**by circleainn · Experimental 0.1.0 · BeamNG.drive 0.39.4.0**
+**by circleainn · Experimental 0.1.1 · BeamNG.drive 0.39.4.0**
 
 Hold your vehicle recovery control to rewind your car. Release to drive again.
 Horizon Rewind records up to 20 seconds of player-car history automatically in singleplayer Freeroam.
@@ -18,11 +18,24 @@ No new binding or recording switch is required. Changing vehicles automatically 
 
 The optional **Horizon Rewind — Prototype** UI app provides a rewind button, Cancel and a saved speed selector: 0.25×, 0.5×, 1×, 2×, 4× or 8×. Speed also applies to the recovery control. Escape cancels while holding the app's button.
 
+Click the speed button to open the in-app choices. Use **−** to minimize the panel
+or **×** to hide it behind a small Rewind tab. Click **+** or the tab to restore
+the panel. The view is remembered; keyboard recovery still works while hidden.
+
 To uninstall, close the game and remove the ZIP. Installation does not change game files or saved bindings.
 
 ## What to expect
 
 Rewind follows recorded node positions, body deformation and wheel rotation. On release it restores supported damage, door/hood/trunk latches, momentum and drivetrain state while preserving current controls and the camera selection.
+
+Stock damage-material switches, including supported cracked and shattered glass
+materials, now follow the preview timeline. Flying glass particles and broken
+mesh connections are separate and are not fully reversed during preview.
+
+Arcade and Realistic use the recorded gearbox state. Dual-clutch transmissions
+also retain both shaft gears and clutch state. Pending shifts resume from the
+recorded engaged gear instead of continuing a shift with reset controller targets;
+this does not reproduce every fraction of a mid-shift transition.
 
 This remains an experimental mod:
 

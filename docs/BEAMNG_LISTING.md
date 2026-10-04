@@ -1,7 +1,7 @@
 # Horizon Rewind
 
 **Author:** circleainn  
-**Version:** 0.1.0 — experimental  
+**Version:** 0.1.1 — experimental  
 **Tagline:** Hold recovery to rewind your car. Release to drive again.  
 **Upload:** `horizon_rewind_circleainn.zip` from the GitHub release, not GitHub's source-code ZIP.
 
@@ -22,11 +22,16 @@ Cancel, and a speed selector from 0.25× to 8×. Your speed setting is saved and
 also applies to keyboard controls. You do not need the app or a recording switch
 to use rewind.
 
+The panel can be minimized or hidden behind a small restore tab. Its speed
+choices open inside the app, without a native browser dropdown.
+
 ## Features
 
 - Up to 20 seconds of player-car history.
 - Visible backward motion, wheel rotation and recorded body deformation.
 - Restoration of supported damage, panel latches, motion and drivetrain state.
+- Historical glass/damage material switches during preview; airborne glass is separate.
+- Arcade and Realistic gear restoration, including both shafts of supported DCTs.
 - Automatic setup when changing cars; no individual vehicle configuration.
 - Automatic optional support for Detachable Tires 1.2, Tire Impact Punctures 1.4,
   Dynamic Damage Particles 2.0 and Fluid Spill Mod 1.3.0.
@@ -77,7 +82,7 @@ with BeamNG GmbH, Microsoft, Playground Games or Turn 10 Studios.
 ## Submission notes — omit this section from the public overview
 
 Choose the appropriate gameplay/utility category in the current upload form.
-Use version 0.1.0 and keep the ZIP filename unchanged for future updates.
+Use version 0.1.1 and keep the ZIP filename unchanged for future updates.
 Add at least two real in-game images showing the car during rewind and the
 optional controls; a short gameplay clip would also help demonstrate the feature.
 Do not present a mockup as a gameplay screenshot. Capture these after a rendered

@@ -141,7 +141,7 @@ local function attach(car)
   failedEffects = {}
   effectsCall('configure', vehicleId, session)
   phase, message = 'recording', 'Hold your recovery control to rewind.'
-  car:queueLuaCommand("extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindVehicle'); extensions.horizonRewindVehicle.configure("..session..',true)')
+  car:queueLuaCommand("extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindMaterials'); extensions.load('horizonRewindTransmission'); extensions.load('horizonRewindVehicle'); extensions.horizonRewindVehicle.configure("..session..',true)')
   car:queueLuaCommand("extensions.load('horizonRewindRecovery'); extensions.horizonRewindRecovery.configure("..session..',true)')
   publish()
 end

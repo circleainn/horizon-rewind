@@ -1,4 +1,4 @@
-<div class="hr-app" ng-class="{'hr-active': hr.phase === 'rewinding', 'hr-error': hr.phase === 'error'}">
+<div class="hr-app" ng-class="{'hr-active': hr.phase === 'rewinding', 'hr-error': hr.phase === 'error', 'hr-compact': hrView !== 'full'}">
   <style>
     .hr-app { box-sizing: border-box; width: 100%; height: 100%; min-width: 320px; overflow: auto; background: rgba(24,24,24,.94); color: #eee; font: 13px/1.4 Overpass,Roboto,"Segoe UI",Arial,sans-serif; user-select: none; }
     .hr-app * { box-sizing: border-box; }
@@ -39,12 +39,26 @@
     .hr-app .hr-message { margin-top: 7px; color: #b7b7b7; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
     .hr-app.hr-active .hr-status { color: #ff963e; }
     .hr-app.hr-error .hr-status, .hr-app.hr-error .hr-message { color: #ffae9d; }
+    .hr-app.hr-compact { background: transparent; pointer-events: none; overflow: visible; }
+    .hr-app.hr-compact .hr-header, .hr-app .hr-restore { pointer-events: auto; }
+    .hr-app .hr-window-actions { display: flex; gap: 5px; align-items: center; }
+    .hr-app .hr-window-actions button { width: 25px; height: 24px; line-height: 20px; }
+    .hr-app .hr-restore { float: right; padding: 5px 10px; background: #303030; }
+    .hr-app .hr-speeds { position: relative; }
+    .hr-app .hr-speed-menu { position: absolute; bottom: 36px; right: 0; z-index: 5; width: 136px; padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #242424; border: 1px solid #777; box-shadow: 0 2px 8px #111; }
+    .hr-app .hr-speed-menu button { height: 24px; }
+    .hr-app .hr-speed-menu button.hr-selected { border-color: #f58220; color: #ff963e; }
   </style>
-  <div class="hr-header">
+  <button class="hr-restore" type="button" ng-show="hrView === 'hidden'" ng-click="hrSetView('full')" aria-label="Show Horizon Rewind">Rewind</button>
+  <div class="hr-header" ng-show="hrView !== 'hidden'">
     <span class="hr-title" title="Horizon Rewind prototype · Player car only. Damage and supported effect-mod restoration are experimental. Traffic does not rewind.">Rewind</span>
-    <span class="hr-subtitle">Player car</span>
+    <div class="hr-window-actions">
+      <span class="hr-subtitle">{{hrView === 'compact' ? hrStatus() : 'Player car'}}</span>
+      <button type="button" ng-click="hrSetView(hrView === 'compact' ? 'full' : 'compact')" ng-attr-aria-label="{{hrView === 'compact' ? 'Expand Horizon Rewind' : 'Minimize Horizon Rewind'}}" ng-attr-title="{{hrView === 'compact' ? 'Expand' : 'Minimize'}}">{{hrView === 'compact' ? '+' : '−'}}</button>
+      <button type="button" ng-click="hrSetView('hidden')" aria-label="Hide Horizon Rewind" title="Hide panel; keep a small restore tab">×</button>
+    </div>
   </div>
-  <div class="hr-body">
+  <div class="hr-body" ng-show="hrView === 'full'">
     <div class="hr-readout">
       <span class="hr-status">{{hrStatus()}}</span>
       <span class="hr-seconds">{{(hr.phase === 'rewinding' || hr.phase === 'restoring' ? hr.rewindSeconds : hr.availableSeconds) | number:1}}<small> s {{hr.phase === 'rewinding' || hr.phase === 'restoring' ? 'back' : 'available'}}</small></span>
@@ -60,10 +74,13 @@
         <span>{{hr.phase === 'restoring' ? 'Restoring…' : hrHeld || hr.phase === 'rewinding' ? 'Release to drive' : 'Hold to rewind'}}</span>
       </button>
       <button class="hr-cancel" type="button" ng-click="hrCancel()" ng-disabled="hr.phase !== 'rewinding' &amp;&amp; !hrHeld" title="Return to where rewind began (Escape while holding)">Cancel</button>
-      <label class="hr-speeds" title="Rewind speed is remembered between sessions and also applies to the recovery key.">
+      <div class="hr-speeds" title="Rewind speed is remembered between sessions and also applies to the recovery key.">
         <span>Speed</span>
-        <select class="hr-speed" aria-label="Rewind speed" ng-model="hr.speed" ng-options="speed as (speed + '×') for speed in hrSpeeds" ng-change="hrSetSpeed(hr.speed)"></select>
-      </label>
+        <button class="hr-speed" type="button" aria-label="Rewind speed" aria-haspopup="menu" ng-attr-aria-expanded="{{hrSpeedOpen}}" ng-click="hrToggleSpeed()">{{hr.speed}}× ▾</button>
+        <div class="hr-speed-menu" ng-show="hrSpeedOpen" role="menu" aria-label="Choose rewind speed">
+          <button type="button" role="menuitemradio" ng-repeat="speed in hrSpeeds" ng-class="{'hr-selected': hr.speed === speed}" ng-attr-aria-checked="{{hr.speed === speed}}" ng-click="hrSetSpeed(speed)">{{speed}}×</button>
+        </div>
+      </div>
     </div>
     <div class="hr-message" role="status" aria-live="polite">{{hr.message || (hr.enabled ? 'Hold recovery to rewind; release to drive.' : 'Waiting for a singleplayer Freeroam vehicle.')}}</div>
   </div>

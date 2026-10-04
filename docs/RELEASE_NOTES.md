@@ -1,6 +1,16 @@
-# Horizon Rewind 0.1.0
+# Horizon Rewind 0.1.1
 
-First experimental release by circleainn for BeamNG.drive 0.39.4.0.
+Experimental update by circleainn for BeamNG.drive 0.39.4.0.
+
+- Replaced the native speed dropdown with an in-app menu.
+- Added persistent minimize/hide controls and a restore tab.
+- Recorded stock damage-material changes so supported glass damage follows rewind.
+- Added DCT shaft/clutch state restoration and a safe in-gear handoff for stock
+  shift controllers in Arcade and Realistic. Mid-shift animations are not exact.
+
+Tire smoke, surface dust, grass effects, airborne stock glass and skid marks are
+still outside the supported visual rewind. Their native engine state is not
+exposed through the inspected mod APIs; this update does not claim to reverse it.
 
 Hold your Recover Vehicle control to visibly rewind your car, then release to
 resume driving. History records automatically in singleplayer Freeroam, with

@@ -30,6 +30,22 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
       };
       scope.hrHeld = false;
       scope.hrSpeeds = [0.25, 0.5, 1, 2, 4, 8];
+      scope.hrSpeedOpen = false;
+      scope.hrView = 'full';
+      try {
+        var savedView = $window.localStorage.getItem('horizonRewind.view');
+        if (['full', 'compact', 'hidden'].indexOf(savedView) !== -1) scope.hrView = savedView;
+      } catch (_) { /* Storage is optional in embedded browsers. */ }
+
+      scope.hrSetView = function (view) {
+        if (['full', 'compact', 'hidden'].indexOf(view) === -1) return;
+        // Never leave a mouse/keyboard UI hold active behind a hidden panel.
+        finish(false);
+        scope.hrSpeedOpen = false;
+        scope.hrView = view;
+        try { $window.localStorage.setItem('horizonRewind.view', view); } catch (_) {}
+      };
+      scope.hrToggleSpeed = function () { scope.hrSpeedOpen = !scope.hrSpeedOpen; };
 
       function send(command) {
         bngApi.engineLua("if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind." + command + ' end');
@@ -76,7 +92,11 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
       };
 
       scope.hrSetSpeed = function (speed) {
-        if (scope.hrSpeeds.indexOf(speed) !== -1) send('setSpeed(' + speed + ')');
+        if (scope.hrSpeeds.indexOf(speed) === -1) return;
+        scope.hr.speed = speed;
+        scope.hrSpeedOpen = false;
+        send('setSpeed(' + speed + ')');
+        element[0].querySelector('.hr-speed').focus();
       };
 
       scope.hrStatus = function () {
@@ -118,6 +138,29 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
         target.addEventListener(event, listener, false);
         removers.push(function () { target.removeEventListener(event, listener, false); });
       }
+
+      listen(document, 'click', function (event) {
+        if (scope.hrSpeedOpen && !element[0].querySelector('.hr-speeds').contains(event.target)) {
+          scope.$evalAsync(function () { scope.hrSpeedOpen = false; });
+        }
+      });
+      listen(element[0].querySelector('.hr-speeds'), 'keydown', function (event) {
+        var options = element[0].querySelectorAll('.hr-speed-menu button');
+        var index = Array.prototype.indexOf.call(options, document.activeElement);
+        if (['ArrowDown', 'ArrowUp', 'Home', 'End'].indexOf(event.key) !== -1) {
+          event.preventDefault();
+          scope.$evalAsync(function () {
+            scope.hrSpeedOpen = true;
+            $timeout(function () {
+              var next = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 :
+                (index + (event.key === 'ArrowUp' ? -1 : 1) + options.length) % options.length;
+              if (options[next]) options[next].focus();
+            }, 0);
+          });
+        } else if (event.key === 'Tab') {
+          scope.$evalAsync(function () { scope.hrSpeedOpen = false; });
+        }
+      });
 
       if ($window.PointerEvent) {
         listen(button, 'pointerdown', function (event) {
@@ -161,6 +204,11 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
         }
       });
       listen(document, 'keydown', function (event) {
+        if (event.key === 'Escape' && scope.hrSpeedOpen) {
+          event.preventDefault();
+          scope.$evalAsync(function () { scope.hrSpeedOpen = false; });
+          element[0].querySelector('.hr-speed').focus();
+        }
         if (event.key === 'Escape' && held) {
           event.preventDefault();
           finish(true);

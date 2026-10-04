@@ -1,4 +1,44 @@
-# Horizon Rewind — prototype 0.1
+# Horizon Rewind — prototype 0.1.1
+
+## 0.1.1 update
+
+The speed selector now uses an HTML menu inside the app, avoiding native select
+popups. Minimize and hide modes persist locally and leave a restore control.
+The browser regression checks all six speeds at 320/360-pixel widths, keyboard
+selection, outside/Escape dismissal, persistence and releasing a held UI rewind
+when hiding the panel.
+
+The material adapter snapshots stock damage-switch slots, applies them during
+preview, and restores their bookkeeping after repair. A native Covet regression
+verified intact preview, cancellation to damaged glass and commitment to intact
+glass. This tests material switching, not the rendering of flying shards or
+historical broken mesh topology.
+
+DCT recording now includes both shafts' gear indices, ratios and clutch state.
+The stock shift-controller adapter restores accessible clutch/shaft tables and
+returns to the in-gear callback. BeamNG blocks private scalar upvalue writes, so
+pending shift targets are not written and an in-progress shift is not resumed
+with reset targets. No sandbox restrictions are bypassed. Arcade and Realistic
+Scintilla driving checks passed, including the recorded second-shaft selection,
+momentum, held throttle and normal post-crash braking on a new impact. This is
+not an exact replay of every intermediate shift state or every custom gearbox.
+
+The 109 core checks and seven native latch assertions also passed. Native smoke,
+surface particles and skid marks remain unimplemented; see [effects scope](EFFECTS_SCOPE.md).
+
+Additional checks:
+
+```powershell
+./tests/run_glass_smoke.ps1
+./tests/run_drive_smoke.ps1 -Model scintilla -Behavior arcade
+./tests/run_drive_smoke.ps1 -Model scintilla -Behavior realistic
+```
+
+`node tests/ui_spec.cjs` needs Playwright, Edge and the installed game's Angular
+runtime. Set `PLAYWRIGHT_MODULE` to a Playwright module path if it is not locally
+installed, and `BEAMNG_ROOT` if the game is in a different location.
+
+## Original architecture and verification
 
 A player-car rewind mod for BeamNG.drive, built against the installed **0.39.4.0** Lua APIs. History builds automatically while you drive in singleplayer Freeroam. Hold your usual vehicle recovery control to watch your car move backward through its recent path, then release to continue driving with historical momentum.
 

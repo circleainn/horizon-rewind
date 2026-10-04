@@ -21,7 +21,9 @@ local completeRestore
 local resetCallback
 local drivingInputs = {steering=true, throttle=true, brake=true, clutch=true, parkingbrake=true}
 local deviceFields = {'outputAV1','outputAV2','inputAV','virtualMassAV','gearIndex',
-  'gearRatio','desiredGearRatio','gearRatioChangeRate','shiftLossCoef'}
+  'gearRatio','desiredGearRatio','gearRatioChangeRate','shiftLossCoef',
+  'gearIndex1','gearIndex2','gearRatio1','gearRatio2','clutchAV1','clutchAV2',
+  'clutchAngle1','clutchAngle2','clutchRatio1','clutchRatio2','clutchRatio'}
 
 local function notify(event, data)
   obj:queueGameEngineLua(string.format(
@@ -90,6 +92,16 @@ end
 
 local function tires(method, ...)
   local extension = type(extensions) == 'table' and rawget(extensions, 'horizonRewindTires')
+  return type(extension) == 'table' and optionalCall(extension[method], ...) or nil
+end
+
+local function materials(method, ...)
+  local extension = type(extensions) == 'table' and rawget(extensions, 'horizonRewindMaterials')
+  return type(extension) == 'table' and optionalCall(extension[method], ...) or nil
+end
+
+local function transmission(method, ...)
+  local extension = type(extensions) == 'table' and rawget(extensions, 'horizonRewindTransmission')
   return type(extension) == 'table' and optionalCall(extension[method], ...) or nil
 end
 
@@ -235,7 +247,7 @@ local function snapshot()
     hydros = {}, devices = {}, storage = {},
     controllers = optionalState(controller),
     powertrain = optionalState(powertrain), fluidState = fluids('capture'), tireState = tires('capture'),
-    localCouplers = captureLocalCouplers()}
+    localCouplers = captureLocalCouplers(), materialState = materials('capture'), transmissionState = transmission('capture')}
   for i, cid in ipairs(nodeIds) do
     local p, velocity = obj:getNodePosition(cid), obj:getNodeVelocityVector(cid)
     local k = (i - 1) * 7
@@ -352,6 +364,7 @@ local function seek(token, secondsAgo)
   local a, b, alpha = history:bracket(cursor)
   applyGeometry(a, b, alpha)
   tires('preview', a.tireState)
+  materials('apply', a.materialState)
   local pos = obj:getPosition()
   notify('previewed', {rewindSeconds = amount, position = {pos.x, pos.y, pos.z}})
 end
@@ -459,6 +472,7 @@ completeRestore = function(token, atomicReset)
     end
   end
   optionalCall(type(powertrain)=='table' and powertrain.calculateTreeInertia)
+  transmission('restore', f.transmissionState)
   local currentStorages = storages()
   for name, value in pairs(f.storage) do
     local storage = currentStorages[name]
@@ -472,6 +486,7 @@ completeRestore = function(token, atomicReset)
   restoreLocalCouplers(f)
   fluids('restore', f.fluidState)
   tires('restore', f.tireState)
+  materials('apply', f.materialState)
   fluids('setRewinding', false)
   effects('finish')
   tires('finish')

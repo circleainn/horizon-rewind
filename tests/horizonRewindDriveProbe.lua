@@ -21,7 +21,27 @@ end
 local function emit(tag,value)
   obj:queueGameEngineLua('extensions.horizonRewindDriveSmoke.receive('..serialize({tag=tag,data=value})..')')
 end
-function M.start()
+function M.start(behavior)
+  controller.mainController.setGearboxMode(behavior or 'arcade')
+  if behavior=='realistic' then controller.mainController.shiftToGearIndex(2) end
+  local adapter=extensions.horizonRewindTransmission
+  local captureOK,captureValue=pcall(function() return adapter and adapter.capture() end)
+  emit('adapter-start',{loaded=adapter~=nil,captured=captureOK and captureValue~=nil,error=not captureOK and tostring(captureValue) or nil})
+  if adapter and not M.transmissionWrapped then
+    M.transmissionWrapped=true
+    local original=adapter.restore
+    adapter.restore=function(frame)
+      local restored,restoreError=pcall(original,frame)
+      local captured,after=pcall(adapter.capture)
+      if not restored or not captured then emit('transmission',{ok=false,error=tostring(restoreError or after)});return end
+      local report={ok=frame~=nil and after~=nil,behavior=behavior,primary=after and after.primary,phase=after and after.phase}
+      if frame and after then
+        report.ok=frame.primary==after.primary and after.phase=='inGear'
+        report.expectedPrimary=frame.primary;report.selectedPhase=frame.phase
+      end
+      emit('transmission',report)
+    end
+  end
   input.event('parkingbrake',0,1);input.event('brake',0,1);input.event('throttle',1,1)
   mode,elapsed,nextSample,samples='drive',0,0,{}
 end
