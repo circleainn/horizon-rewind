@@ -29,8 +29,10 @@ To uninstall, close the game and remove the ZIP. Installation does not change ga
 Rewind follows recorded node positions, body deformation and wheel rotation. On release it restores supported damage, door/hood/trunk latches, momentum and drivetrain state while preserving current controls and the camera selection.
 
 Stock damage-material switches, including supported cracked and shattered glass
-materials, now follow the preview timeline. Flying glass particles and broken
-mesh connections are separate and are not fully reversed during preview.
+materials, now follow the preview timeline. Dynamic Damage Particles' flying
+glass shards are covered by its existing integration. Native BeamNG glass
+particles and broken mesh connections are separate and are not fully reversed
+during preview.
 
 Arcade and Realistic use the recorded gearbox state. Dual-clutch transmissions
 also retain both shaft gears and clutch state. Pending shifts resume from the
@@ -56,7 +58,7 @@ These integrations activate automatically for supported versions and data layout
 | --- | --- |
 | Detachable Tires 1.2 | Recorded detachment state, mesh visibility and independent tire-ring motion |
 | Tire Impact Punctures 1.4 | Supported pressure and puncture state |
-| Dynamic Damage Particles 2.0 | Player-owned Lua debris and sparks |
+| Dynamic Damage Particles 2.0 | Player-owned Lua debris, including flying glass shards, and sparks |
 | Fluid Spill Mod 1.3.0 | Sampled fluid effects and supported reservoir state |
 
 Fluid Spill combines effects without retaining vehicle ownership, so its integration rewinds **world fluid state**, including fluid left by other cars. Unknown compatibility layouts remain inactive. Full limits are documented in the development notes.

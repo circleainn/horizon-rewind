@@ -1,7 +1,7 @@
 # Native effects rewind investigation
 
 Requested scope: player-car tire smoke, dirt/dust clouds, grass and other surface
-particles, airborne glass, and skid marks. Rewind should remove future births,
+particles, native airborne glass, and skid marks. Rewind should remove future births,
 restore past effects, and support cancellation without disturbing other vehicles.
 
 ## Findings in BeamNG 0.39.4.0 / Enhanced Vehicle Effects 1.7
@@ -35,6 +35,8 @@ surface-aligned segments. Appearance, transparency sorting and performance requi
 rendered validation before enabling it by default.
 
 This renderer is not implemented in 0.1.1. Existing Dynamic Damage Particles
-compatibility works because that mod retains its own Lua particle state. Glass
+compatibility works because that mod retains its own Lua particle state. This
+already includes its flying glass shards (glass kind 3, plus its other supported
+debris kinds); it is not part of the unfinished native-particle work. Glass
 material switches are also controllable and are included in 0.1.1, independently
 of airborne shards or broken flex-mesh connections.
