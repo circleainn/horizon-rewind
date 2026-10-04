@@ -21,6 +21,7 @@ local frames, head, tail, count, historyBytes = {}, 1, 0, 0, 0
 local vehicleId, session, clock, accumulator = nil, nil, 0, 0
 local active, live, liveTime, nativePending, armed = false, nil, 0, false, false
 local reason, warned = 'Fluid Spill is not loaded', {}
+local maxSeconds = 20
 
 local function warn(message)
   reason = message
@@ -121,11 +122,11 @@ local function push(state, bytes)
     historyBytes = historyBytes - frames[tail].bytes
     frames[tail], tail, count = nil, tail - 1, count - 1
   end
-  while count > 0 and (count >= 101 or historyBytes + bytes > HISTORY_BYTES) do dropOldest() end
+  while count > 0 and (count >= maxSeconds * 5 + 2 or historyBytes + bytes > HISTORY_BYTES) do dropOldest() end
   tail, count = tail + 1, count + 1
   frames[tail] = {time = clock, state = state, bytes = bytes}
   historyBytes = historyBytes + bytes
-  while count > 1 and frames[head + 1].time <= clock - 20 do dropOldest() end
+  while count > 1 and frames[head + 1].time <= clock - maxSeconds do dropOldest() end
 end
 
 local function selected(secondsAgo)
@@ -139,7 +140,8 @@ local function selected(secondsAgo)
   return frames[lo].state, frames[lo].time
 end
 
-function M.configure(id, token)
+function M.configure(id, token, seconds)
+  if seconds == 20 or seconds == 40 or seconds == 60 then maxSeconds = seconds end
   M.abort()
   vehicleId, session, clock, accumulator = id, token, 0, 0
   clearHistory(); discover()

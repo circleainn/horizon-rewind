@@ -41,6 +41,31 @@ const game = process.env.BEAMNG_ROOT || 'C:/Steam/steamapps/common/BeamNG.drive'
     assert(await page.evaluate(()=>commands.at(-1).includes('setSpeed(0.25)')));
     await speedButton.click();await page.keyboard.press('Escape');await page.getByRole('menu').waitFor({state:'hidden'});
     await speedButton.click();await page.locator('.hr-title').click();await page.getByRole('menu').waitFor({state:'hidden'});
+    await page.getByRole('button',{name:'Rewind options',exact:true}).click();
+    for (const seconds of [20,40,60]) {
+      await page.getByRole('button',{name:seconds+' s',exact:true}).click();
+      assert(await page.evaluate(n=>commands.at(-1).includes('setHistorySeconds('+n+')'),seconds));
+    }
+    await page.getByRole('checkbox',{name:'Rewind active traffic',exact:true}).check();
+    assert(await page.evaluate(()=>commands.at(-1).includes('setTrafficEnabled(true)')));
+    await page.getByRole('checkbox',{name:'Rewind sound effect',exact:true}).uncheck();
+    assert(await page.evaluate(()=>commands.at(-1).includes('setAudioEnabled(false)')));
+    await page.evaluate(()=>{
+      const scope=angular.element(document.getElementById('app')).injector().get('$rootScope');
+      scope.$broadcast('HorizonRewindState',{enabled:true,phase:'rewinding',availableSeconds:42,maxSeconds:60,speed:2,trafficEnabled:true,trafficCount:3});scope.$digest();
+    });
+    assert(await page.getByRole('button',{name:'60 s',exact:true}).isDisabled());
+    assert(await page.getByRole('checkbox',{name:'Rewind active traffic',exact:true}).isDisabled());
+    assert.equal(await page.getByRole('button',{name:'60 s',exact:true}).getAttribute('aria-pressed'),'true');
+    const panel=page.locator('.hr-app');
+    assert(await panel.evaluate(e=>e.scrollWidth<=e.clientWidth),'Options overflow horizontally');
+    fs.mkdirSync(path.join(root,'.test-results'),{recursive:true});
+    await page.locator('#app').screenshot({path:path.join(root,'.test-results/ui-options.png')});
+    await page.evaluate(()=>{
+      const scope=angular.element(document.getElementById('app')).injector().get('$rootScope');
+      scope.$broadcast('HorizonRewindState',{enabled:true,phase:'recording',availableSeconds:42,maxSeconds:60,speed:2});scope.$digest();
+    });
+    await page.getByRole('button',{name:'Rewind options',exact:true}).click();
     await page.getByRole('button',{name:'Minimize Horizon Rewind',exact:true}).click();
     assert(!(await page.locator('.hr-body').isVisible()));
     assert.equal(await page.locator('.hr-app').evaluate(e=>getComputedStyle(e).pointerEvents),'none');

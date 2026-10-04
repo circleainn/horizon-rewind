@@ -192,4 +192,14 @@ test('transmission resumes its actual ratio instead of shifting from reset neutr
   restore()
   assert(gear.gearRatio==2.11 and gear.gearRatioChangeRate==0 and gear.shiftLossCoef==1 and ratioAtInertia==2.11)
 end)
+test('20 40 and 60 second buffers retain and seek their selected window',function()
+  for _, seconds in ipairs({20,40,60}) do
+    local _,env,state,module,events=fixture()
+    module.configure(1,true,seconds)
+    for i=1,(seconds+5)*20 do module.updateGFX(.05) end
+    assert(math.abs(events.recording.availableSeconds-seconds)<.1,'Wrong retained duration')
+    module.begin(1);module.seek(1,seconds)
+    assert(math.abs(events.previewed.rewindSeconds-seconds)<.1,'Long history could not be sought')
+  end
+end)
 print('VEHICLE_OPTIONAL_SPEC_DONE '..count)

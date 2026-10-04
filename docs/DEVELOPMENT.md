@@ -1,4 +1,49 @@
-# Horizon Rewind — prototype 0.1.1
+# Horizon Rewind — prototype 0.1.2
+
+## 0.1.2 update
+
+The Options panel persists `maxSeconds` (20/40/60), `trafficEnabled` (default false),
+and `audioEnabled` alongside speed. Duration changes reconfigure all recorders;
+traffic/duration mutations are rejected during recovery takeover or rewind.
+The 20 Hz node/beam buffer holds `duration * 20 + 2` samples. Lua effect adapters
+follow the duration but retain their fixed memory limits.
+
+`horizonRewindTraffic` discovers active `gameplay_traffic` AI vehicles. Each has a
+separate recorder token, VM-bundle identity, and complete vehicle history. Fleet
+barriers wait for every begin/seek/restore acknowledgment and two published-pose
+updates before momentum is seeded and the shared world pause is released.
+The selected window is the minimum retained duration across player and traffic.
+Pool deactivation, resets, replacement and deletion invalidate affected history;
+this does not reconstruct historical populations or restore inactive pooled cars.
+The traffic manager's update/reset hooks are temporarily gated during rewind,
+and wrapper teardown preserves wrappers installed later by other mods.
+AI public driving options are restored; routes are replanned, while private AI
+decision history, pursuits and traffic lights remain outside the recorded scope.
+DDP remains player-owned; this update does not add traffic-owned debris rewind.
+
+`horizonRewindAudio` uses a non-positional SFXEmitter on AudioGui, separate from
+simulation time and UI-app visibility. Real-time volume/pitch smoothing stops the
+cue on release, cancellation, exhaustion, unloading or disabling audio. Audio
+failure cannot stop physical rewind. The original WAV can be regenerated with
+`python tools/make_rewind_audio.py`; it contains no third-party recordings.
+See BeamNG's [SFXEmitter documentation](https://documentation.beamng.com/modding/levels/level_classes/sound/).
+Inspection of the installed Lua audio APIs found playback controls, but no
+supported mixed-output PCM capture API for true backward engine/crash audio.
+
+Checks: `tests/run_specs.ps1` covers the three retained durations, settings
+persistence, traffic barriers, stale tokens/pooling, hook cleanup and audio
+lifecycle. `tests/ui_spec.cjs` covers the options and locking during rewind.
+`tests/run_traffic_smoke.ps1` exercises two native vehicles in isolated smallgrid
+with a traffic-registered car driven using explicit pedals because no traffic
+road graph exists there. It is not a test of autonomous city traffic behavior,
+rendered visuals, audible quality or a performance benchmark.
+
+The native traffic check passed: cancellation restored the traffic pose within
+1.1 cm, release stayed within 3.3 cm of the preview, and the vehicle-side speed
+after resume was 18.45 m/s versus a selected 18.09 m/s with throttle still held.
+Velocity is checked in VLua after physics resumes: GE's immediate post-teleport
+velocity can reflect the display displacement rather than physical node motion.
+The 13 particle-adapter and 12 fluid-adapter regressions also passed.
 
 ## 0.1.1 update
 

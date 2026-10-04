@@ -16,6 +16,7 @@ local preparedForReset = false
 local detachedRestore = false
 local pendingConfiguration
 local sampleInterval, maxSeconds = 0.05, 20
+local trafficVehicle = false
 local scratch = vec3()
 local completeRestore
 local resetCallback
@@ -277,6 +278,16 @@ local function snapshot()
   for name, storage in pairs(storages()) do
     if type(storage) == 'table' and type(storage.storedEnergy) == 'number' then f.storage[name] = storage.storedEnergy end
   end
+  if trafficVehicle and type(ai) == 'table' then
+    -- getState returns the whole AI module, including functions. Only copy the
+    -- public driving options; route planning restarts at the restored pose.
+    f.ai = {}
+    for _, key in ipairs({'mode','speedMode','routeSpeed','extAggression','cutOffDrivability',
+      'driveInLaneFlag','extAvoidCars','targetObjectID'}) do
+      local value = ai[key]
+      if type(value) == 'number' or type(value) == 'string' or type(value) == 'boolean' then f.ai[key] = value end
+    end
+  end
   return f
 end
 
@@ -316,9 +327,9 @@ local function protected(fn, ...)
   if not ok then fail(err) end
 end
 
-local function configure(token, active)
+local function configure(token, active, seconds, isTraffic)
   if detachedRestore then
-    pendingConfiguration = {token, active}
+    pendingConfiguration = {token, active, seconds, isTraffic}
     return
   end
   removeResetCallback()
@@ -327,7 +338,9 @@ local function configure(token, active)
   tires('abort')
   session = token
   enabled, phase = active == true, active and 'recording' or 'disabled'
-  history:clear()
+  if seconds == 20 or seconds == 40 or seconds == 60 then maxSeconds = seconds end
+  trafficVehicle = isTraffic == true
+  history = History.new(maxSeconds, math.ceil(maxSeconds / sampleInterval) + 2)
   cursor, liveFrame, restoreFrame, impulseFrame = nil, nil, nil, nil
   waitingForReset, preparedForReset = false, false
   detachedRestore = false
@@ -473,6 +486,7 @@ completeRestore = function(token, atomicReset)
   end
   optionalCall(type(powertrain)=='table' and powertrain.calculateTreeInertia)
   transmission('restore', f.transmissionState)
+  if trafficVehicle and f.ai then restoreOptionalState(ai, f.ai) end
   local currentStorages = storages()
   for name, value in pairs(f.storage) do
     local storage = currentStorages[name]
@@ -513,7 +527,7 @@ completeRestore = function(token, atomicReset)
     if pendingConfiguration then
       local pending = pendingConfiguration
       pendingConfiguration = nil
-      configure(pending[1], pending[2])
+      configure(pending[1], pending[2], pending[3], pending[4])
       impulseFrame = f
       if enabled then
         local initial = {}

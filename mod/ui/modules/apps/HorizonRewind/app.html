@@ -48,17 +48,38 @@
     .hr-app .hr-speed-menu { position: absolute; bottom: 36px; right: 0; z-index: 5; width: 136px; padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #242424; border: 1px solid #777; box-shadow: 0 2px 8px #111; }
     .hr-app .hr-speed-menu button { height: 24px; }
     .hr-app .hr-speed-menu button.hr-selected { border-color: #f58220; color: #ff963e; }
+    .hr-app .hr-window-actions .hr-options-toggle { width: auto; padding: 0 6px; font-size: 11px; }
+    .hr-app .hr-options { font-size: 12px; }
+    .hr-app .hr-duration { display: flex; gap: 5px; align-items: center; margin-bottom: 8px; }
+    .hr-app .hr-duration span { margin-right: auto; }
+    .hr-app .hr-duration button { padding: 3px 7px; }
+    .hr-app .hr-duration button[aria-pressed="true"] { border-color: #f58220; color: #ff963e; }
+    .hr-app .hr-traffic-option { display: flex; gap: 6px; align-items: center; }
+    .hr-app .hr-traffic-option input { margin: 0; accent-color: #f58220; }
+    .hr-app .hr-option-note { margin: 7px 0 0; color: #aaa; font-size: 11px; line-height: 1.3; }
   </style>
   <button class="hr-restore" type="button" ng-show="hrView === 'hidden'" ng-click="hrSetView('full')" aria-label="Show Horizon Rewind">Rewind</button>
   <div class="hr-header" ng-show="hrView !== 'hidden'">
-    <span class="hr-title" title="Horizon Rewind prototype · Player car only. Damage and supported effect-mod restoration are experimental. Traffic does not rewind.">Rewind</span>
+    <span class="hr-title" title="Horizon Rewind prototype. Traffic rewind is optional. Damage restoration is experimental.">Rewind</span>
     <div class="hr-window-actions">
-      <span class="hr-subtitle">{{hrView === 'compact' ? hrStatus() : 'Player car'}}</span>
+      <span class="hr-subtitle">{{hrView === 'compact' ? hrStatus() : hr.trafficEnabled ? '+' + hr.trafficCount + ' traffic' : 'Player car'}}</span>
+      <button class="hr-options-toggle" type="button" ng-show="hrView === 'full'" ng-click="hrToggleOptions()" aria-label="Rewind options" ng-attr-aria-expanded="{{hrOptionsOpen}}">{{hrOptionsOpen ? 'Back' : 'Options'}}</button>
       <button type="button" ng-click="hrSetView(hrView === 'compact' ? 'full' : 'compact')" ng-attr-aria-label="{{hrView === 'compact' ? 'Expand Horizon Rewind' : 'Minimize Horizon Rewind'}}" ng-attr-title="{{hrView === 'compact' ? 'Expand' : 'Minimize'}}">{{hrView === 'compact' ? '+' : '−'}}</button>
       <button type="button" ng-click="hrSetView('hidden')" aria-label="Hide Horizon Rewind" title="Hide panel; keep a small restore tab">×</button>
     </div>
   </div>
   <div class="hr-body" ng-show="hrView === 'full'">
+    <div class="hr-options" ng-show="hrOptionsOpen">
+      <div class="hr-duration" role="group" aria-label="History length">
+        <span>History</span>
+        <button type="button" ng-repeat="seconds in hrHistories" ng-click="hrSetHistory(seconds)" ng-disabled="hrOptionsLocked()" ng-attr-aria-pressed="{{hr.maxSeconds === seconds}}">{{seconds}} s</button>
+      </div>
+      <label class="hr-traffic-option"><input type="checkbox" ng-model="hr.trafficEnabled" ng-change="hrSetTraffic()" ng-disabled="hrOptionsLocked()">Rewind active traffic</label>
+      <label class="hr-traffic-option"><input type="checkbox" ng-model="hr.audioEnabled" ng-change="hrSetAudio()">Rewind sound effect</label>
+      <p class="hr-option-note">Longer history uses more memory. Traffic adds recording and restore work for each car. Changing history length clears the buffer.</p>
+      <p class="hr-option-note" ng-show="hr.trafficEnabled">Recycled traffic limits the shared history.</p>
+    </div>
+    <div ng-show="!hrOptionsOpen">
     <div class="hr-readout">
       <span class="hr-status">{{hrStatus()}}</span>
       <span class="hr-seconds">{{(hr.phase === 'rewinding' || hr.phase === 'restoring' ? hr.rewindSeconds : hr.availableSeconds) | number:1}}<small> s {{hr.phase === 'rewinding' || hr.phase === 'restoring' ? 'back' : 'available'}}</small></span>
@@ -83,5 +104,6 @@
       </div>
     </div>
     <div class="hr-message" role="status" aria-live="polite">{{hr.message || (hr.enabled ? 'Hold recovery to rewind; release to drive.' : 'Waiting for a singleplayer Freeroam vehicle.')}}</div>
+    </div>
   </div>
 </div>

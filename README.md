@@ -1,9 +1,9 @@
 # Horizon Rewind
 
-**by circleainn · Experimental 0.1.1 · BeamNG.drive 0.39.4.0**
+**by circleainn · Experimental 0.1.2 · BeamNG.drive 0.39.4.0**
 
 Hold your vehicle recovery control to rewind your car. Release to drive again.
-Horizon Rewind records up to 20 seconds of player-car history automatically in singleplayer Freeroam.
+Horizon Rewind records 20 seconds of player-car history automatically in singleplayer Freeroam. Longer history and traffic rewind are optional.
 
 [Download](https://github.com/circleainn/horizon-rewind/releases) · [Report a bug](https://github.com/circleainn/horizon-rewind/issues)
 
@@ -21,6 +21,28 @@ The optional **Horizon Rewind — Prototype** UI app provides a rewind button, C
 Click the speed button to open the in-app choices. Use **−** to minimize the panel
 or **×** to hide it behind a small Rewind tab. Click **+** or the tab to restore
 the panel. The view is remembered; keyboard recovery still works while hidden.
+
+Open **Options** to select **20, 40 or 60 seconds**, enable **Rewind active traffic**,
+or turn off the **rewind sound effect**. Settings are saved. Defaults are 20 seconds
+and traffic off. Changing history length clears the buffer; these two options
+cannot change during rewind.
+
+Traffic rewind records the physical state of currently active AI traffic cars,
+including position, deformation, wheels and momentum, and resumes the group
+together. Available rewind time is limited to the history shared by all tracked
+cars. Newly spawned, reset or recycled cars start a fresh buffer. Deleted cars
+are not recreated, and parked cars outside the traffic AI system are not recorded.
+Traffic AI replans from its restored pose; police pursuits, traffic lights and
+other world logic are not rewound.
+
+40 and 60 seconds retain roughly two and three times as many vehicle snapshots.
+Traffic adds recording and restoration work for each car. Optional particle and
+fluid histories follow the selected duration while keeping their existing memory
+limits, so dense effects can retain less history than the vehicles.
+
+The sound is an original looping rewind cue with pitch tied to rewind speed.
+It fades out on release and at the end of the buffer. It is not a recording of
+engine, tire or crash sounds playing backward.
 
 To uninstall, close the game and remove the ZIP. Installation does not change game files or saved bindings.
 
@@ -43,7 +65,7 @@ This remains an experimental mod:
 
 - Damage connections and props are rebuilt on release; some visual changes pop.
 - Unsupported mechanical, thermal and custom controller state may reset.
-- Traffic, stock particles, Enhanced Vehicle Effects particles, skid marks and the rest of the world do not rewind.
+- Stock particles, Enhanced Vehicle Effects particles, skid marks and other world systems do not rewind. Traffic vehicle rewind is optional and experimental.
 - History clears after resets, vehicle changes and level changes. Complex vehicles and dense effect scenes cost more memory and processing time.
 - Career, missions and multiplayer are outside this release's scope.
 - BeamNG's saved replay feature is separate. Live rewind is unavailable during replay recording or playback.

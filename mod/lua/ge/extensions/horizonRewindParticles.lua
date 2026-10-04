@@ -379,7 +379,8 @@ fail = function(err)
   return false
 end
 
-local function configure(vehicleId,token)
+local function configure(vehicleId,token,seconds)
+  if seconds == 20 or seconds == 40 or seconds == 60 then maxSeconds = seconds end
   abort()
   id,session=vehicleId,token
   vehicleRef=be and be:getObjectByID(id) or nil

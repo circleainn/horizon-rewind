@@ -25,12 +25,17 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
         rewindSeconds: 0,
         maxSeconds: 20,
         speed: 2,
+        trafficEnabled: false,
+        trafficCount: 0,
+        audioEnabled: true,
         message: 'Loading rewind…',
         damageMode: 'experimental'
       };
       scope.hrHeld = false;
       scope.hrSpeeds = [0.25, 0.5, 1, 2, 4, 8];
       scope.hrSpeedOpen = false;
+      scope.hrOptionsOpen = false;
+      scope.hrHistories = [20, 40, 60];
       scope.hrView = 'full';
       try {
         var savedView = $window.localStorage.getItem('horizonRewind.view');
@@ -46,6 +51,22 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
         try { $window.localStorage.setItem('horizonRewind.view', view); } catch (_) {}
       };
       scope.hrToggleSpeed = function () { scope.hrSpeedOpen = !scope.hrSpeedOpen; };
+      scope.hrToggleOptions = function () {
+        scope.hrSpeedOpen = false;
+        scope.hrOptionsOpen = !scope.hrOptionsOpen;
+      };
+      scope.hrOptionsLocked = function () {
+        return scope.hrHeld || scope.hr.phase === 'rewinding' || scope.hr.phase === 'restoring';
+      };
+      scope.hrSetHistory = function (seconds) {
+        if (scope.hrOptionsLocked() || scope.hrHistories.indexOf(seconds) === -1) return;
+        send('setHistorySeconds(' + seconds + ')');
+      };
+      scope.hrSetTraffic = function () {
+        if (scope.hrOptionsLocked()) return;
+        send('setTrafficEnabled(' + (scope.hr.trafficEnabled ? 'true' : 'false') + ')');
+      };
+      scope.hrSetAudio = function () { send('setAudioEnabled(' + (scope.hr.audioEnabled ? 'true' : 'false') + ')'); };
 
       function send(command) {
         bngApi.engineLua("if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind." + command + ' end');
@@ -128,6 +149,9 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
           scope.hr.availableSeconds = Math.max(0, finite(state.availableSeconds, 0));
           scope.hr.rewindSeconds = Math.max(0, finite(state.rewindSeconds, 0));
           scope.hr.speed = finite(state.speed, 2);
+          scope.hr.trafficEnabled = state.trafficEnabled === true;
+          scope.hr.trafficCount = Math.max(0, finite(state.trafficCount, 0));
+          scope.hr.audioEnabled = state.audioEnabled !== false;
           scope.hr.message = typeof state.message === 'string' ? state.message : '';
           scope.hr.damageMode = state.damageMode || 'experimental';
           if (held && ['disabled', 'restoring', 'error'].indexOf(scope.hr.phase) !== -1) clearHold();

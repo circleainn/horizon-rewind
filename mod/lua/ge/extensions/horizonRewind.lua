@@ -1,7 +1,7 @@
 -- Horizon Rewind by circleainn. See LICENSE.txt for usage and redistribution terms.
 -- Automatic player-car history and a reversible bridge to stock recovery input.
 local M = {}
-M.dependencies = {'horizonRewindCamera', 'horizonRewindFluids', 'horizonRewindParticles'}
+M.dependencies = {'horizonRewindCamera', 'horizonRewindFluids', 'horizonRewindParticles', 'horizonRewindTraffic', 'horizonRewindAudio'}
 local enabled, vehicleId, session = false, nil, 0
 local wanted = true
 local vehicleBundle, failedVehicleId, failedBundle
@@ -11,6 +11,8 @@ local held, ready, busy, finishing, cancelRequested = false, false, false, false
 local pauseOwned, wasPaused, disableAfterRestore = false, false, false
 local elapsed, heartbeat, sentSeconds = 0, 0, 0
 local maxSeconds = 20
+local trafficEnabled, trafficWait = false, 0
+local audioEnabled = true
 local recoveryHeld, recoveryTime, recoveryPending = false, 0, false
 local recoveryDelay = 0.7 -- Stock recovery.lua uses this tap/hold threshold.
 local pendingRestore
@@ -19,6 +21,25 @@ local settingsPath = '/settings/horizonRewind.json'
 local speeds = {[0.25] = true, [0.5] = true, [1] = true, [2] = true, [4] = true, [8] = true}
 local effectModules = {'horizonRewindFluids', 'horizonRewindParticles'}
 local failedEffects = {}
+
+local function trafficCall(method, ...)
+  local traffic = extensions and extensions.horizonRewindTraffic
+  if traffic and traffic[method] then return traffic[method](...) end
+  if method == 'ready' then return true end
+end
+
+local function sharedHistory()
+  local limit, count = trafficCall('status', availableSeconds)
+  return limit or availableSeconds, count or 0
+end
+
+local function saveSettings()
+  if type(jsonWriteFile) == 'function' then
+    local ok, result = pcall(jsonWriteFile, settingsPath,
+      {speed=speed, maxSeconds=maxSeconds, trafficEnabled=trafficEnabled, audioEnabled=audioEnabled}, true)
+    if not ok or result == false then log('W', 'horizonRewind', 'Could not save rewind settings.') end
+  end
+end
 
 local function effectsCall(method, ...)
   for _, name in ipairs(effectModules) do
@@ -37,8 +58,12 @@ end
 local function loadSettings()
   if type(jsonReadFile) ~= 'function' then return end
   local ok, data = pcall(jsonReadFile, settingsPath)
-  if ok and type(data) == 'table' and speeds[tonumber(data.speed)] then
-    speed = tonumber(data.speed)
+  if ok and type(data) == 'table' then
+    if speeds[tonumber(data.speed)] then speed = tonumber(data.speed) end
+    local seconds = tonumber(data.maxSeconds)
+    if seconds == 20 or seconds == 40 or seconds == 60 then maxSeconds = seconds end
+    trafficEnabled = data.trafficEnabled == true
+    audioEnabled = data.audioEnabled ~= false
   end
 end
 
@@ -57,9 +82,12 @@ local function canRun()
 end
 
 local function publish()
+  local available, trafficCount = sharedHistory()
   guihooks.trigger('HorizonRewindState', {enabled = enabled, phase = phase,
-    availableSeconds = availableSeconds, rewindSeconds = rewindSeconds,
+    availableSeconds = available, rewindSeconds = rewindSeconds,
     maxSeconds = maxSeconds, speed = speed, message = message,
+    trafficEnabled = trafficEnabled, trafficCount = trafficCount,
+    audioEnabled = audioEnabled,
     damageMode = 'experimental'})
 end
 
@@ -119,9 +147,12 @@ local function clearOperation()
   recoveryHeld, recoveryTime, recoveryPending = false, 0, false
   pendingRestore = nil
   visibleRestoreUpdates = 0
+  trafficWait = 0
 end
 
 local function detach()
+  if extensions.horizonRewindAudio then extensions.horizonRewindAudio.stop() end
+  trafficCall('configure', nil, false, maxSeconds)
   queue('abort')
   queueRecovery('configure', 'false')
   cameraCall('abort')
@@ -139,9 +170,10 @@ local function attach(car)
   vehicleBundle = bundleFor(vehicleId)
   failedVehicleId, failedBundle = nil, nil
   failedEffects = {}
-  effectsCall('configure', vehicleId, session)
+  effectsCall('configure', vehicleId, session, maxSeconds)
+  trafficCall('configure', vehicleId, trafficEnabled, maxSeconds)
   phase, message = 'recording', 'Hold your recovery control to rewind.'
-  car:queueLuaCommand("extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindMaterials'); extensions.load('horizonRewindTransmission'); extensions.load('horizonRewindVehicle'); extensions.horizonRewindVehicle.configure("..session..',true)')
+  car:queueLuaCommand("extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindMaterials'); extensions.load('horizonRewindTransmission'); extensions.load('horizonRewindVehicle'); extensions.horizonRewindVehicle.configure("..session..',true,'..maxSeconds..')')
   car:queueLuaCommand("extensions.load('horizonRewindRecovery'); extensions.horizonRewindRecovery.configure("..session..',true)')
   publish()
 end
@@ -187,7 +219,8 @@ local function beginRewind()
       message = 'Stop the saved replay before using live rewind.'; publish(); return
     end
   end
-  if availableSeconds < 0.1 then message = 'Drive for a moment to build rewind history.'; publish(); return end
+  trafficCall('update', 1)
+  if sharedHistory() < 0.1 then message = 'Drive for a moment to build shared rewind history.'; publish(); return end
   wasPaused = simTimeAuthority.getPause()
   if not wasPaused then simTimeAuthority.pause(true) end
   pauseOwned = true
@@ -195,6 +228,7 @@ local function beginRewind()
   elapsed, rewindSeconds, sentSeconds = 0, 0, 0
   phase, message = 'rewinding', 'Release to drive from here. Cancel returns to where you started.'
   effectsCall('begin', vehicleId, session)
+  trafficCall('begin')
   queue('begin')
   publish()
 end
@@ -235,10 +269,31 @@ local function setSpeed(value)
   value = tonumber(value)
   if not speeds[value] then return end
   speed = value
-  if type(jsonWriteFile) == 'function' then
-    local ok, result = pcall(jsonWriteFile, settingsPath, {speed = speed}, true)
-    if not ok or result == false then log('W', 'horizonRewind', 'Could not save rewind speed.') end
-  end
+  saveSettings()
+  publish()
+end
+
+local function setHistorySeconds(value)
+  value = tonumber(value)
+  if value ~= 20 and value ~= 40 and value ~= 60 then return end
+  if phase == 'rewinding' or phase == 'restoring' or recoveryHeld or recoveryPending then return end
+  if value == maxSeconds then return end
+  maxSeconds = value
+  saveSettings()
+  local car = vehicle()
+  if enabled and car then attach(car) end
+  message = 'History length changed. Building a fresh buffer.'
+  publish()
+end
+
+local function setTrafficEnabled(value)
+  if type(value) ~= 'boolean' then return end
+  if phase == 'rewinding' or phase == 'restoring' or recoveryHeld or recoveryPending then return end
+  trafficEnabled = value
+  failedVehicleId, failedBundle = nil, nil
+  saveSettings()
+  trafficCall('configure', vehicleId, enabled and trafficEnabled, maxSeconds)
+  message = value and 'Traffic rewind enabled. Waiting for shared history.' or 'Rewinding the player car only.'
   publish()
 end
 
@@ -252,6 +307,7 @@ local function commitRestore(data)
     car:applyClusterVelocityScaleAdd(car:getRefNodeId(), 0, v[1], v[2], v[3])
   end
   effectsCall('finish', data.actualSelectedSeconds or data.rewindSeconds or sentSeconds, data.cancelled == true)
+  trafficCall('commit')
   cameraCall('afterRestore', vehicleId)
   restorePause(); clearOperation()
   phase, message = 'recording', data.cancelled and 'Returned to the start of rewind.' or 'Hold your recovery control to rewind.'
@@ -269,6 +325,7 @@ local function restoredGeometryVisible(data)
 end
 
 local function onVehicleMessage(id, token, event, data)
+  if trafficCall('onVehicleMessage', id, token, event, data) then return end
   if not enabled or id ~= vehicleId or token ~= session then return end
   data = data or {}
   -- Acks are asynchronous. Ignore events for a different operation phase and
@@ -289,7 +346,8 @@ local function onVehicleMessage(id, token, event, data)
   elseif event == 'empty' then
     if phase ~= 'rewinding' or ready then return end
     effectsCall('abort')
-    effectsCall('configure', vehicleId, session)
+    effectsCall('configure', vehicleId, session, maxSeconds)
+    trafficCall('configure', vehicleId, trafficEnabled, maxSeconds)
     restorePause(); clearOperation(); phase, message = 'recording', data.message
     if disableAfterRestore then disableAfterRestore = false; setActive(false) end
   elseif event == 'restorePrepared' then
@@ -340,6 +398,7 @@ local function onVehicleMessage(id, token, event, data)
 end
 
 local function invalidateVehicle(id)
+  trafficCall('invalidate', id)
   if id == failedVehicleId then failedVehicleId, failedBundle = nil, nil end
   if id ~= vehicleId then return end
   -- Vehicle Selector and part changes can rebuild the VLua VM while retaining
@@ -347,6 +406,7 @@ local function invalidateVehicle(id)
   -- abort/restore commands to the replacement's unrelated node structure.
   cameraCall('abort')
   effectsCall('abort')
+  trafficCall('configure', nil, false, maxSeconds)
   restorePause()
   session = session + 1
   vehicleId, vehicleBundle, availableSeconds = nil, nil, 0
@@ -357,6 +417,9 @@ local function invalidateVehicle(id)
 end
 
 local function onUpdate(dtReal, dtSim)
+  local audio = extensions and extensions.horizonRewindAudio
+  if audio then audio.update(audioEnabled and phase == 'rewinding' and held and ready
+    and not cancelRequested and rewindSeconds < sharedHistory(), speed, dtReal) end
   local allowed, reason = canRun()
   local car = be:getPlayerVehicle(0)
   local currentId = car and car:getID()
@@ -366,6 +429,13 @@ local function onUpdate(dtReal, dtSim)
     setActive(true)
   end
   if not enabled then return end
+  trafficCall('update', dtSim)
+  local _, _, trafficError = trafficCall('status', availableSeconds)
+  if trafficError then
+    detach(); enabled = false; failedVehicleId, failedBundle = currentId, currentBundle
+    phase, message = 'error', 'Traffic rewind stopped: '..trafficError..' Toggle traffic off to retry.'
+    publish(); return
+  end
   if currentId == vehicleId and currentBundle and vehicleBundle and currentBundle ~= vehicleBundle then
     invalidateVehicle(vehicleId)
   end
@@ -395,7 +465,7 @@ local function onUpdate(dtReal, dtSim)
     recoveryTime = recoveryTime + dtReal
     if recoveryTime >= recoveryDelay then
       recoveryHeld = false
-      if availableSeconds >= 0.1 then
+      if sharedHistory() >= 0.1 then
         -- VLua receives this before begin: stop the stock preview without
         -- invoking its reset/teleport, then use the recorded physical car.
         recoveryPending, recoveryTime = true, 0
@@ -421,24 +491,26 @@ local function onUpdate(dtReal, dtSim)
     if not simTimeAuthority.getPause() then simTimeAuthority.pause(true) end
     if pendingRestore then
       visibleRestoreUpdates = restoredGeometryVisible(pendingRestore) and visibleRestoreUpdates + 1 or 0
-      if visibleRestoreUpdates >= 2 then
+      if visibleRestoreUpdates >= 2 and trafficCall('ready') then
         commitRestore(pendingRestore)
         return
       end
     end
     if busy then elapsed = elapsed + dtReal end
-    if busy and elapsed > 5 then
+    trafficWait = trafficCall('ready') and 0 or trafficWait + dtReal
+    if (busy and elapsed > 5) or trafficWait > 5 then
       failedVehicleId, failedBundle = vehicleId, vehicleBundle
       detach(); enabled = false; phase, message = 'error', 'The vehicle did not respond. Reset or replace it to retry.'; publish(); return
     end
     -- Accumulate wall time while a preview is in flight. Acknowledgment delay
     -- changes display cadence, not the requested rewind speed.
     if phase == 'rewinding' and held then
-      rewindSeconds = math.min(availableSeconds, rewindSeconds + dtReal * speed)
+      rewindSeconds = math.min(sharedHistory(), rewindSeconds + dtReal * speed)
     end
-    if phase == 'rewinding' and ready and not busy then
+    if phase == 'rewinding' and ready and not busy and trafficCall('ready') then
       if not cancelRequested and rewindSeconds > sentSeconds then
         busy = queue('seek', string.format('%.9g', rewindSeconds))
+        trafficCall('seek', rewindSeconds)
         sentSeconds, elapsed = rewindSeconds, 0
       elseif not held and not finishing then
         finishing, busy, phase = true, true, 'restoring'
@@ -446,6 +518,7 @@ local function onUpdate(dtReal, dtSim)
         message = 'Restoring the car and its momentum...'
         cameraCall('beforeRestore', vehicleId)
         queue('finish', tostring(cancelRequested))
+        trafficCall('finish', cancelRequested)
         publish()
       end
     end
@@ -463,6 +536,13 @@ end
 
 M.setEnabled, M.beginRewind, M.endRewind = setEnabled, beginRewind, endRewind
 M.cancelRewind, M.setSpeed, M.requestState = cancelRewind, setSpeed, publish
+M.setHistorySeconds, M.setTrafficEnabled = setHistorySeconds, setTrafficEnabled
+M.setAudioEnabled = function(value)
+  if type(value) ~= 'boolean' then return end
+  audioEnabled = value
+  if not value and extensions.horizonRewindAudio then extensions.horizonRewindAudio.stop() end
+  saveSettings(); publish()
+end
 M.recoveryDown, M.recoveryUp = recoveryDown, recoveryUp
 M.recoveryTakenOver = recoveryTakenOver
 M.onVehicleMessage, M.onUpdate = onVehicleMessage, onUpdate
