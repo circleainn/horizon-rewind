@@ -1,4 +1,38 @@
-# Horizon Rewind — prototype 0.1.3
+# Horizon Rewind — prototype 0.1.4
+
+## 0.1.4 update
+
+Grime used separate `washDirt` and `dirt`/`setGlass` calls, with its body and glass
+renderers deferring redraw by 180 and 60 ms. Rebuilding at every preview could
+therefore display clean textures between dirty frames. `dirtCanvas` collects the
+original public calls into one script per canvas and finishes compositing with
+the public style setters, preserving the user's shade/glass settings. It uses
+`queueWebViewStreamJS` to replace obsolete queued jobs. Every job contains a full
+snapshot, including its palette, so dropping an earlier job cannot lose state.
+Unchanged visual state avoids another repaint. No third-party renderer is edited.
+
+Broken-beam changes now block interpolation only for physical restoration.
+Paused visual preview interpolates across those changes; resets and teleports
+still remain discrete. Release at a fracture boundary uses the earlier recorded
+frame, potentially adjusting by one sample (normally up to 50 ms of history).
+Mesh-link reconstruction remains a separate release-time operation.
+
+The player no longer waits for a global traffic preview barrier. Each member
+has at most one in-flight seek and one coalesced latest target. Acknowledgments
+dispatch that latest target, with a per-command five-second watchdog. Release
+waits for all final seeks, restores and transform publication before unpausing.
+Hidden cars before their arrival require no preview geometry work.
+
+Validation: core specs cover smooth fracture preview with safe release, slow
+traffic coalescing, bounded command queues, watchdogs and release barriers. The
+native traffic smoke delays one car's preview acknowledgment by 180 ms and
+confirms player previews continue, cancellation restores the live pose and
+release preserves motion. Grime's real body/roughness/glass/glass-roughness
+canvases were checked immediately after each batch, including with earlier
+redraw timers pending, to detect a clean intermediate frame. Canvas tests use
+software readback to avoid GPU-to-CPU pixel rounding changes during assertions.
+Run `run_specs.ps1` before `run_grime_canvas_spec.ps1` to generate the original
+adapter's JS fixtures; installed renderer source stays in a temporary directory.
 
 ## 0.1.3 update
 
@@ -167,7 +201,7 @@ BeamNG's saved-replay feature remains separate and unaffected. Live rewind is un
 
 ## Prototype limits
 
-**This is not yet a complete Forza-quality visual damage rewind.** Node geometry moves backward while held, but broken mesh connections, hidden/detached props and other damage visuals are rebuilt on release. Those transitions may pop. Release uses the exact interpolated node pose and velocity; discrete controller and damage topology state uses the preceding recorded sample.
+**This is not yet a complete Forza-quality visual damage rewind.** Node geometry moves backward while held, but broken mesh connections, hidden/detached props and other damage visuals are rebuilt on release. Those transitions may pop. Continuous motion releases at the interpolated pose and velocity; fracture boundaries use the preceding complete physical sample.
 
 Stock engine particles, skid marks, recorded game audio, missions, timers, AI decisions and the rest of the world do not rewind. Traffic physical rewind is optional. Supported effect mods are covered separately below. Untracked vehicles remain at their current positions while the simulation is paused.
 

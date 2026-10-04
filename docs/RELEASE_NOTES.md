@@ -1,3 +1,23 @@
+# Horizon Rewind 0.1.4
+
+Experimental update by circleainn for BeamNG.drive 0.39.4.0.
+
+- Fixed Grime's clear-then-delayed-redraw cycle during rewind. Each texture now
+  receives a complete repaint in one browser task, with obsolete queued previews
+  replaced by the latest snapshot. Unchanged appearance skips repainting.
+- Restored smooth visual interpolation across broken-beam changes. Version 0.1.3
+  held the earlier frame at these boundaries, making impact deformation skip.
+  Release still selects a complete physical sample at a fracture boundary; this
+  can cause a small position/shape adjustment when releasing during the impact.
+- A slow traffic vehicle no longer stalls the player's preview. Each traffic
+  recorder keeps one pending seek and the latest desired cursor. The group still
+  synchronizes before physics resumes, with per-vehicle timeout protection.
+- Hidden traffic before its recorded arrival no longer repeats geometry work.
+
+Checks cover atomic repainting in all four installed Grime canvases, traffic
+delays during preview, preview/cancel/commit and collision restoration. These
+do not guarantee smooth frame rates on every vehicle, traffic count or system.
+
 # Horizon Rewind 0.1.3
 
 Experimental update by circleainn for BeamNG.drive 0.39.4.0.

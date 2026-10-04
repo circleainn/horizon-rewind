@@ -380,17 +380,18 @@ local function begin(token)
   notify('began', {availableSeconds = available()})
 end
 
-local function bracket(time)
+local function bracket(time, physical)
   local a,b,alpha=history:bracket(time)
   if a==b or alpha==0 then return a,b,alpha end
-  local discontinuous=a.segment~=b.segment or a.topology~=b.topology
+  local discontinuous=a.segment~=b.segment or (physical and a.topology~=b.topology)
   local distance,speed2=0,0
   for axis=1,3 do
     distance=distance+(b.origin[axis]-a.origin[axis])^2
     speed2=speed2+((a.velocity and a.velocity[axis]) or 0)^2
   end
-  -- Never blend a teleport/reset or a change in broken-beam topology into an
-  -- invented physical car. The earlier intact frame remains intact.
+  -- Preview can interpolate across a fracture while physics is paused. On
+  -- release, keep a complete recorded structure at that boundary. Teleports
+  -- and resets must never be blended, including during visual playback.
   local maxTravel=2+math.sqrt(speed2)*math.max(0,b.time-a.time)*2
   if discontinuous or distance>maxTravel*maxTravel then return a,a,0 end
   return a,b,alpha
@@ -409,10 +410,10 @@ local function seek(token, secondsAgo)
   notify('previewed', {rewindSeconds = amount, position = {pos.x, pos.y, pos.z}})
 end
 
--- The release pose must be exactly the pose that was shown, rather than the
--- preceding 20 Hz sample. Discrete controller/topology state uses that sample.
+-- Continuous motion releases at the displayed pose. Across a fracture, use
+-- the preceding complete physical sample instead of an inconsistent structure.
 local function frameAt(time)
-  local a, b, alpha = bracket(time)
+  local a, b, alpha = bracket(time, true)
   if a == b or alpha == 0 then return a end
   local f = {}
   for key, value in pairs(a) do f[key] = value end

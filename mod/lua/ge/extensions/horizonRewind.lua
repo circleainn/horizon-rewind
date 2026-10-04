@@ -430,7 +430,7 @@ local function onUpdate(dtReal, dtSim)
     setActive(true)
   end
   if not enabled then return end
-  trafficCall('update', dtSim)
+  trafficCall('update', dtSim, dtReal)
   local _, _, trafficError = trafficCall('status', availableSeconds)
   if trafficError then
     detach(); enabled = false; failedVehicleId, failedBundle = currentId, currentBundle
@@ -498,7 +498,9 @@ local function onUpdate(dtReal, dtSim)
       end
     end
     if busy then elapsed = elapsed + dtReal end
-    trafficWait = trafficCall('ready') and 0 or trafficWait + dtReal
+    -- Traffic has its own per-command watchdog. During held playback its
+    -- asynchronous preview need not become globally idle every frame.
+    trafficWait = ((phase=='rewinding' and held) or trafficCall('ready')) and 0 or trafficWait + dtReal
     if (busy and elapsed > 5) or trafficWait > 5 then
       failedVehicleId, failedBundle = vehicleId, vehicleBundle
       detach(); enabled = false; phase, message = 'error', 'The vehicle did not respond. Reset or replace it to retry.'; publish(); return
@@ -508,12 +510,12 @@ local function onUpdate(dtReal, dtSim)
     if phase == 'rewinding' and held then
       rewindSeconds = math.min(sharedHistory(), rewindSeconds + dtReal * speed)
     end
-    if phase == 'rewinding' and ready and not busy and trafficCall('ready') then
+    if phase == 'rewinding' and ready and not busy then
       if not cancelRequested and rewindSeconds > sentSeconds then
         busy = queue('seek', string.format('%.9g', rewindSeconds))
         trafficCall('seek', rewindSeconds)
         sentSeconds, elapsed = rewindSeconds, 0
-      elseif not held and not finishing then
+      elseif not held and not finishing and trafficCall('ready') then
         finishing, busy, phase = true, true, 'restoring'
         elapsed = 0
         message = 'Restoring the car and its momentum...'

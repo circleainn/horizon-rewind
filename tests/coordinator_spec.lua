@@ -739,13 +739,14 @@ test('history and traffic settings persist together and reject mid-rewind change
   eq(h.state().maxSeconds,40);eq(h.state().trafficEnabled,true)
 end)
 
-test('traffic acknowledgments gate preview and release of the world pause', function()
+test('slow traffic does not gate player preview but still gates release', function()
   local h=harness()
   local ready=false
   h.env.extensions.horizonRewindTraffic={ready=function() return ready end, status=function(n) return n,2 end}
   h.record();h.begin();h.tick()
-  eq(h.lastCommand().method,'begin')
-  ready=true;h.tick();eq(h.lastCommand().method,'seek');h.send('previewed')
+  eq(h.lastCommand().method,'seek');h.send('previewed')
+  h.tick();eq(h.lastCommand().method,'seek');h.send('previewed')
+  ready=true
   h.mod.endRewind();h.tick()
   ready=false
   h.send('restored',{position={1,2,3}});h.tick();h.tick()

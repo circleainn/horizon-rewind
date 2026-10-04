@@ -3,5 +3,6 @@ dist/
 .test-results/
 node_modules/
 tests/*.generated.lua
+tests/*.generated.json
 paint-fix/
 __pycache__/

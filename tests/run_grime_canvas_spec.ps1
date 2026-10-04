@@ -5,7 +5,7 @@ New-Item -ItemType Directory -Path $destination | Out-Null
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive=[IO.Compression.ZipFile]::OpenRead($GrimeArchive)
 try {
-  foreach($name in @('dirt','rough','glass')) {
+  foreach($name in @('dirt','rough','glass','glassrough')) {
     $entry=$archive.GetEntry("vehicles/common/dynamic_dirt/$name.js")
     [IO.Compression.ZipFileExtensions]::ExtractToFile($entry,(Join-Path $destination "$name.js"))
   }

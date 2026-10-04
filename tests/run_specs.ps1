@@ -17,6 +17,8 @@ $traffic = Get-Content -LiteralPath (Join-Path $workspace 'mod/lua/ge/extensions
 $trafficSpec = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'traffic_spec.lua') -Raw
 $audio = Get-Content -LiteralPath (Join-Path $workspace 'mod/lua/ge/extensions/horizonRewindAudio.lua') -Raw
 $audioSpec = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'audio_spec.lua') -Raw
+$dirtCanvas = Get-Content -LiteralPath (Join-Path $workspace 'mod/lua/common/horizonRewind/dirtCanvas.lua') -Raw
+$dirtCanvasSpec = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'dirt_canvas_spec.lua') -Raw
 if (@($coordinator, $recovery, $wheel, $camera, $vehicle, $history) | Where-Object { $_.Contains(']====]') }) { throw 'Lua delimiter collision' }
 $source = "require('lua/console/console-lib').initConsole()`npackage.loaded['horizonRewind/history'] = (function()`n" + $history + "`nend)()`n" +
   'HORIZON_REWIND_COORDINATOR_SOURCE = [====[' + $coordinator + "]====]`n" +
@@ -27,6 +29,8 @@ $source = "require('lua/console/console-lib').initConsole()`npackage.loaded['hor
   'testVehicleSource = [====[' + $vehicle + "]====]`n" +
   'testTrafficSource = [====[' + $traffic + "]====]`n" +
   'testAudioSource = [====[' + $audio + "]====]`n" +
+  'testDirtCanvasSource = [====[' + $dirtCanvas + "]====]`n" +
+  "do`n" + $dirtCanvasSpec + "`nend`n" +
   "do`n" + $audioSpec + "`nend`n" +
   "do`n" + $trafficSpec + "`nend`n" +
   "do`n" + $historySpec + "`nend`ndo`n" + $coordinatorSpec + "`nend`ndo`n" + $recoverySpec + "`nend`ndo`n" + $wheelSpec + "`nend`ndo`n" + $cameraSpec + "`nend`ndo`n" + $optionalSpec + "`nend`nprint('ALL_SPECS_PASSED')`n"
@@ -35,7 +39,11 @@ $target = Join-Path $PSScriptRoot 'specs.generated.lua'
 Push-Location -LiteralPath $GameRoot
 try {
   $output = & (Join-Path $GameRoot 'Bin64/console.x64.exe') file $target 2>&1
-  $output | ForEach-Object { Write-Output $_ }
+  $output | ForEach-Object {
+    if($_ -match '^DIRT_CANVAS_JOBS (.+)$') {
+      [IO.File]::WriteAllText((Join-Path $PSScriptRoot 'dirt_canvas_jobs.generated.json'),$Matches[1],[Text.UTF8Encoding]::new($false))
+    } else {Write-Output $_}
+  }
   if ($LASTEXITCODE -ne 0 -or ($output -match 'FATAL LUA ERROR') -or -not ($output -match 'ALL_SPECS_PASSED')) {
     throw 'Lua specification tests failed.'
   }

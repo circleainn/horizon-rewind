@@ -3,9 +3,11 @@
 local M = {}
 local ffi = require('ffi')
 local Compat = require('horizonRewind/fluidCompat')
+local Canvas = require('horizonRewind/dirtCanvas')
 local core, skin, coreRefs, skinRefs, layout, cached, shown
 local hooks, rewinding, lastCapture = {}, false, -math.huge
 local reason = 'Grime 2.0 is not loaded.'
+local visualKey,visualUpdates=nil,0
 local scalarFields = {'rotate','clock','sendAcc','waterZ','mudZ','mudSeen','sinkSeen',
   'sinkHold','sinkSoft','splashN'}
 
@@ -24,6 +26,7 @@ local function detach()
   end
   core,skin,coreRefs,skinRefs,layout,cached,shown = nil,nil,nil,nil,nil,nil,nil
   lastCapture = -math.huge
+  visualKey=nil
 end
 
 local function guard(module, name)
@@ -48,8 +51,8 @@ local function discover()
     end
     local cr = Compat.discover(c, {'updateGFX','nodeState','surface'},
       {S='table',SURF='table',SOILS='table',shiftRGB='function'}, 'dynamicDirtCore.lua')
-    local sr = Compat.discover(s, {'updateGFX','status','applyDirt','setSoil'},
-      {glass='table',glassSent='table',gcall='function',role='string'}, 'dynamicDirtSkin.lua')
+    local sr = Compat.discover(s, {'updateGFX','status','applyDirt','setSoil','setShade','setGlassEffect'},
+      {glass='table',glassSent='table',gcall='function',role='string',shadeWanted='number',glassWanted='number'}, 'dynamicDirtSkin.lua')
     if not cr or not sr then reason='Unsupported Grime state layout.'; return false end
     core,skin,coreRefs,skinRefs = c,s,cr,sr
     for _, module in ipairs({core,skin}) do
@@ -123,23 +126,32 @@ local function apply(f, force)
   Compat.set(coreRefs,'SURF',assert(Compat.copy(f.surface)))
   Compat.set(skinRefs,'glass',assert(Compat.copy(f.glass)))
   Compat.set(skinRefs,'glassSent',assert(Compat.copy(f.glass)))
-  -- Grime's color layer is an accumulated canvas, not just its node map.
-  -- Rebuild through the original public functions so old mud cannot survive
-  -- a return to clean paint. Procedural speckle placement is an approximation.
   local html=require('htmlTexture')
-  html.call('@dynamic_dirt','washDirt',{})
-  html.call('@dynamic_dirt_rough','washDirt',{})
   local palette=Compat.get(coreRefs,'SOILS')
   local color=palette[f.surface.soil] or palette.loam
   local shift=Compat.get(coreRefs,'shiftRGB')
   local dr,dg,db=shift(color.dr,color.dg,color.db)
   local wr,wg,wb=shift(color.wr,color.wg,color.wb)
-  skin.setSoil({dr=dr,dg=dg,db=db,wr=wr,wg=wg,wb=wb,wet=f.surface.wet,
-    rough=f.surface.rough,name=f.surface.soil})
-  if #marks>0 then skin.applyDirt(marks) end
+  local soil={dr=dr,dg=dg,db=db,wr=wr,wg=wg,wb=wb,wet=f.surface.wet,
+    rough=f.surface.rough,name=f.surface.soil}
   local glassCall=Compat.get(skinRefs,'gcall')
-  glassCall('washDirt',{})
-  glassCall('setGlass',f.glass)
+  local style={shade=Compat.get(skinRefs,'shadeWanted'),glass=Compat.get(skinRefs,'glassWanted')}
+  local key=jsonEncode({marks,soil,f.glass,style})
+  if force or key~=visualKey then
+    Canvas.paint(html,obj,function()
+      html.call('@dynamic_dirt','washDirt',{})
+      html.call('@dynamic_dirt_rough','washDirt',{})
+      skin.setSoil(soil)
+      -- Include the palette even if Grime's Lua cache suppresses it: a newer
+      -- streamed snapshot may replace the earlier job that contained it.
+      html.call('@dynamic_dirt','setSoil',soil)
+      glassCall('setSoil',soil)
+      if #marks>0 then skin.applyDirt(marks) end
+      glassCall('washDirt',{})
+      glassCall('setGlass',f.glass)
+    end,style)
+    visualKey=key;visualUpdates=visualUpdates+1
+  end
   shown=f
   return true
 end
@@ -156,9 +168,9 @@ end
 M.capture=function() return safe(capture) end
 M.preview=function(f) return safe(apply,f,false) end
 M.restore=function(f) return safe(apply,f,true) end
-M.begin=function() rewinding=true;shown=nil;safe(discover) end
+M.begin=function() rewinding=true;shown=nil;visualKey=nil;safe(discover) end
 M.finish=function() rewinding=false;cached=nil;lastCapture=-math.huge end
 M.abort=function() rewinding=false;detach() end
 M.onExtensionUnloaded=M.abort
-M.getStatus=function() return {supported=core~=nil,active=rewinding,reason=reason} end
+M.getStatus=function() return {supported=core~=nil,active=rewinding,reason=reason,visualUpdates=visualUpdates} end
 return M

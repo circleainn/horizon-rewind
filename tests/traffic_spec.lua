@@ -111,4 +111,28 @@ test('traffic absent at selected time returns to its pool instead of overlapping
   assert(not h.cars[2].active and not h.cars[2].hidden)
   local available,count=h.mod.status(40);assert(available==40 and count==0)
 end)
+test('slow traffic coalesces previews and catches up before the release barrier',function()
+  local h=fixture();h.start();h.mod.begin()
+  h.mod.seek(.5) -- Player may seek before this VM has acknowledged begin.
+  h.send(2,'began');h.send(3,'began')
+  local before=#h.calls
+  h.mod.seek(1);h.mod.seek(1.5);h.mod.seek(2)
+  assert(#h.calls==before,'Slow VM accumulated unbounded seek commands')
+  h.send(2,'previewed',{position={1,0,0}})
+  assert(#h.calls==before+1 and h.calls[#h.calls].args==',2','Latest cursor did not replace obsolete seeks')
+  assert(not h.mod.ready(),'Release barrier ignored unfinished traffic')
+  h.send(2,'previewed',{})
+  h.send(3,'previewed',{});assert(not h.mod.ready())
+  h.send(3,'previewed',{});assert(h.mod.ready())
+end)
+test('unresponsive traffic still trips its per-command watchdog during playback',function()
+  local h=fixture();h.start();h.mod.begin();h.mod.update(0,5.1)
+  local _,_,fault=h.mod.status(20);assert(fault and fault:find('did not respond',1,true))
+end)
+test('hidden traffic before birth does no repeated geometry work',function()
+  local h=fixture();h.cars[3].active=false;h.pools[2]={name='autoTraffic'}
+  h.start();h.mod.begin();h.send(2,'began');local before=#h.calls
+  h.mod.seek(10);h.mod.seek(12)
+  assert(#h.calls==before and h.cars[2].hidden and h.mod.ready())
+end)
 print('TRAFFIC_SPEC_DONE '..n)

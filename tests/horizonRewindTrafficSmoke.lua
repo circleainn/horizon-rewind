@@ -2,6 +2,7 @@ local M = {}
 local phase, timer, total = 'boot', 0, 0
 local player, other, mod, events, results = nil, nil, nil, {}, {}
 local resumeReply
+local delayedPreview
 local function finish(ok, message)
   phase = 'done'
   jsonWriteFile('horizon-rewind-traffic.json', {ok=ok, message=message, results=results, events=events}, true)
@@ -17,6 +18,11 @@ local function coords(car) local p=pos(car);return {p.x,p.y,p.z} end
 local function update(real, sim)
   if phase == 'done' then return end
   total, timer = total+real, timer+real
+  if delayedPreview and total>=delayedPreview.due then
+    local d=delayedPreview;delayedPreview=nil
+    d.deliver(d.id,d.token,d.event,d.data)
+    events[d.id][d.event]=d.data
+  end
   if total > 100 then error('Timeout at '..phase) end
   if phase == 'boot' then
     player = be:getPlayerVehicle(0)
@@ -24,6 +30,13 @@ local function update(real, sim)
     if not player or not mod or core_gamestate.state.state ~= 'freeroam' then return end
     local original = mod.onVehicleMessage
     mod.onVehicleMessage = function(id, token, event, data)
+      if event=='previewed' and other and id==other:getID() and phase=='cancelSeek' then
+        delayedPreview={due=total+.18,deliver=original,id=id,token=token,event=event,data=data}
+        return
+      end
+      if event=='previewed' and id==player:getID() and delayedPreview then
+        results.playerFramesWhileTrafficPending=(results.playerFramesWhileTrafficPending or 0)+1
+      end
       original(id, token, event, data)
       events[id] = events[id] or {};events[id][event] = data or {}
       if event == 'error' then error('Vehicle '..id..': '..tostring(data.message)) end
@@ -56,6 +69,7 @@ local function update(real, sim)
   elseif phase == 'cancelSeek' and events[other:getID()] and events[other:getID()].previewed
     and events[other:getID()].previewed.rewindSeconds > 1.5 then
     assert(distance(other, results.liveTraffic)>5,'Traffic did not move backward')
+    assert((results.playerFramesWhileTrafficPending or 0)>=3,'Slow traffic stalled player preview')
     results.previewDistance=distance(other,results.liveTraffic)
     mod.cancelRewind();advance('cancel')
   elseif phase == 'cancel' and not simTimeAuthority.getPause() then

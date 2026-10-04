@@ -43,7 +43,7 @@ local function update(real,sim)
     inspect();advance('previewReply')
   elseif phase=='previewReply' and reply then
     results.preview=reply;assert(reply.average<.01,'Preview did not remove future dirt')
-    assert((reply.calls.washDirt or 0)>0,'Body canvas was not rebuilt')
+    assert(reply.adapter.visualUpdates>0,'Body canvas was not rebuilt')
     mod.cancelRewind();advance('cancel')
   elseif phase=='cancel' and events.restored and not simTimeAuthority.getPause() then inspect();advance('cancelReply')
   elseif phase=='cancelReply' and reply then
