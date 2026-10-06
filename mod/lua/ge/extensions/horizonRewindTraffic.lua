@@ -6,6 +6,7 @@ local enabled, operation, fault = false, nil, nil
 local hooks = {}
 local scanClock = 0
 local cancelled = false
+local carLimit=0 -- zero keeps all active traffic, matching the original behavior
 local loadVehicle = "extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindMaterials'); extensions.load('horizonRewindTransmission'); extensions.load('horizonRewindDirt'); extensions.load('horizonRewindVehicle'); "
 
 local function bundle(id)
@@ -100,6 +101,11 @@ function M.configure(id, active, duration)
   playerId, enabled, seconds, scanClock = id, active == true, duration or 20, 1
 end
 
+function M.setLimit(value)
+  if operation or (value~=0 and value~=2 and value~=4 and value~=8) then return end
+  carLimit,scanClock=value,1
+end
+
 function M.invalidate(id)
   if members[id] then
     -- Spawn/destruction notifications can refer to an already replaced VM.
@@ -133,13 +139,36 @@ function M.update(dt,realDt)
   if scanClock < 0.25 then return end
   scanClock = 0
   local traffic = gameplay_traffic and gameplay_traffic.getTrafficData and gameplay_traffic.getTrafficData() or {}
+  local candidates,selected={},{}
+  local player=playerId and be:getObjectByID(playerId)
+  local origin=player and player:getPosition()
+  for id,data in pairs(traffic) do
+    local car=id~=playerId and data.isAi and be:getObjectActive(id) and be:getObjectByID(id)
+    if car then
+      local distance=0
+      if carLimit>0 and origin then
+        local p=car:getPosition()
+        distance=(p.x-origin.x)^2+(p.y-origin.y)^2+(p.z-origin.z)^2
+      end
+      -- Keep existing buffers when cars are at similar distances. An incoming
+      -- car must be about 20% nearer to replace an established recorder.
+      local existing=members[id] and carFor(id,members[id])
+      candidates[#candidates+1]={id=id,score=distance*(existing and .64 or 1)}
+    end
+  end
+  if carLimit>0 then
+    table.sort(candidates,function(a,b) return a.score==b.score and a.id<b.id or a.score<b.score end)
+  end
+  for i,candidate in ipairs(candidates) do
+    if carLimit==0 or i<=carLimit then selected[candidate.id]=true end
+  end
   for id, member in pairs(members) do
-    if id == playerId or not traffic[id] or not traffic[id].isAi or not be:getObjectActive(id) or not carFor(id, member) then
+    if not selected[id] or not carFor(id, member) then
       queue(id, member, 'abort'); members[id] = nil
     end
   end
   for id, data in pairs(traffic) do
-    if id ~= playerId and data.isAi and be:getObjectActive(id) and not members[id] then
+    if selected[id] and not members[id] then
       local car = be:getObjectByID(id)
       if car then
         serial = serial+1

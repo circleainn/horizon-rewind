@@ -759,4 +759,17 @@ test('reapplying the current traffic setting leaves recorded history attached',f
   eq(configured,0)
   h.mod.setTrafficEnabled(false);eq(configured,1)
 end)
+test('traffic limit loads, saves, preserves player history and locks during rewind',function()
+  local h=harness(false,'freeroam',{trafficEnabled=true,trafficLimit=4})
+  eq(h.state().trafficLimit,4)
+  local selected
+  h.env.extensions.horizonRewindTraffic={setLimit=function(n) selected=n end}
+  h.record();local commands=#h.commands
+  h.mod.setTrafficLimit(2)
+  eq(selected,2);eq(h.state().trafficLimit,2);eq(h.writes[#h.writes].trafficLimit,2);eq(#h.commands,commands)
+  h.mod.setTrafficLimit(3);eq(selected,2)
+  h.begin();h.mod.setTrafficLimit(0);eq(h.state().trafficLimit,2)
+  local old=harness(false,'freeroam',{trafficEnabled=true});eq(old.state().trafficLimit,0)
+  local invalid=harness(false,'freeroam',{trafficLimit=-2});eq(invalid.state().trafficLimit,0)
+end)
 print('coordinator_spec: ' .. passed .. ' tests passed')

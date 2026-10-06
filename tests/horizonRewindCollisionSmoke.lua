@@ -1,6 +1,7 @@
 local M={}
 local phase,timer,total='boot',0,0
-local player,other,late,mod,pool
+local player,other,late,far,mod,pool
+local configurations={}
 local events,replies,results={},{},{}
 local function finish(ok,message)
   phase='done';jsonWriteFile('horizon-rewind-collision.json',{ok=ok,message=message,results=results},true);shutdown(ok and 0 or 1)
@@ -23,18 +24,22 @@ local function update(real,sim)
     local original=mod.onVehicleMessage
     mod.onVehicleMessage=function(id,token,event,data)
       original(id,token,event,data);events[id]=events[id] or {};events[id][event]=data or {}
+      if event=='configured' then configurations[id]=(configurations[id] or 0)+1 end
       if event=='error' then error(tostring(data.message)) end
     end
     other=core_vehicles.spawnNewVehicle('covet',{pos=player:getPosition()+vec3(0,-24,0),rot=quat(0,0,1,0),autoEnterVehicle=false})
+    far=core_vehicles.spawnNewVehicle('covet',{pos=player:getPosition()+vec3(150,0,0),autoEnterVehicle=false})
     advance('spawn')
   elseif phase=='spawn' and timer>3 then
-    gameplay_traffic.insertTraffic(other:getID(),false,false)
-    local entry=gameplay_traffic.getTrafficData()[other:getID()]
-    entry.enableRespawn,entry.enableAutoPooling=false,false
+    for _,car in ipairs({other,far}) do
+      gameplay_traffic.insertTraffic(car:getID(),false,false)
+      local entry=gameplay_traffic.getTrafficData()[car:getID()]
+      entry.enableRespawn,entry.enableAutoPooling=false,false
+    end
     pool=core_vehicleActivePooling.getPoolOfVeh(other:getID())
     assert(pool and pool.name=='autoTraffic','Stock pool not created')
-    mod.setTrafficEnabled(true);mod.setSpeed(2)
-    for _,car in ipairs({player,other}) do
+    mod.setTrafficLimit(2);mod.setTrafficEnabled(true);mod.setSpeed(2)
+    for _,car in ipairs({player,other,far}) do
       car:queueLuaCommand("ai.setMode('disabled');input.event('parkingbrake',0,1);input.event('throttle',0,1);input.event('brake',0,1)")
     end
     advance('record')
@@ -60,6 +65,10 @@ local function update(real,sim)
   elseif phase=='lateRecord' and timer>.5 then
     local available,count=extensions.horizonRewindTraffic.status(15)
     results.historyAfterSpawn=available;assert(available==15 and count==2,'New traffic shortened history')
+    assert(configurations[other:getID()]==1,'Existing nearby recorder restarted')
+    assert(configurations[far:getID()]==2,'Far recorder was not stopped when nearer traffic arrived')
+    assert(be:getObjectActive(far:getID()),'Unrecorded traffic was deactivated')
+    results.trafficLimit={count=count,nearConfigurations=configurations[other:getID()],farConfigurations=configurations[far:getID()]}
     mod.beginRewind();advance('seek')
   elseif phase=='seek' and events[player:getID()].previewed and events[player:getID()].previewed.rewindSeconds>4 then
     assert(late:isHidden(),'New traffic was visible before birth')
@@ -79,7 +88,7 @@ local function update(real,sim)
     -- Verify visibility after reactivation, as the real traffic pool does.
     pool:setVeh(late:getID(),true,true)
     assert(not late:isHidden(),'Reactivated pooled car stayed hidden')
-    finish(true,'Real two-car collision repaired without new beam damage; new traffic preserved history and returned to stock pool')
+    finish(true,'Collision repaired; two-car recording cap replaced far traffic without restarting nearby history; late traffic returned to stock pool')
   end
 end
 M.receive=function(id,data) replies[id]=data end

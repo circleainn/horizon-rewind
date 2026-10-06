@@ -1,4 +1,26 @@
-# Horizon Rewind — prototype 0.1.5
+# Horizon Rewind — prototype 0.1.6
+
+## 0.1.6 update
+
+The saved `trafficLimit` setting accepts 0 (All), 2, 4 or 8; missing settings
+retain All. During recording, the existing quarter-second traffic scan selects
+up to that many active AI vehicles by squared distance from the player. Existing
+recorders receive a 0.64 score multiplier, so an incoming car needs to be about
+20% nearer to replace one. All mode skips distance calculations and sorting.
+
+Changing the limit reconciles membership without restarting the player or
+unchanged traffic recorders. Removed recorders abort; newly selected cars start
+fresh history and retain the existing stock-pool before-arrival behavior. The
+group is frozen during rewind/restoration, and settings reject changes while
+the recovery control is held. Unrecorded vehicles remain at their current poses
+through the global pause; possible obstructions on release are an explicit
+tradeoff of limiting recording. No frame-rate improvement is quantified.
+
+Validation covers nearest-car selection, hysteresis, lowering/removing the cap,
+preserved recorder tokens, settings persistence and operation locks. Browser
+checks exercise all four choices and the disabled/selected state. The native
+collision check adds a distant traffic car, then introduces a nearer third car
+to verify replacement without restarting the existing nearby car's history.
 
 ## 0.1.5 update
 

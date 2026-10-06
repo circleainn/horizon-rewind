@@ -48,14 +48,21 @@ const game = process.env.BEAMNG_ROOT || 'C:/Steam/steamapps/common/BeamNG.drive'
     }
     await page.getByRole('checkbox',{name:'Rewind active traffic',exact:true}).check();
     assert(await page.evaluate(()=>commands.at(-1).includes('setTrafficEnabled(true)')));
+    const limits=page.getByRole('group',{name:'Traffic car limit',exact:true});
+    for(const limit of [2,4,8,0]) {
+      await limits.getByRole('button',{name:limit?String(limit):'All',exact:true}).click();
+      assert(await page.evaluate(n=>commands.at(-1).includes('setTrafficLimit('+n+')'),limit));
+    }
     await page.getByRole('checkbox',{name:'Rewind sound effect',exact:true}).uncheck();
     assert(await page.evaluate(()=>commands.at(-1).includes('setAudioEnabled(false)')));
     await page.evaluate(()=>{
       const scope=angular.element(document.getElementById('app')).injector().get('$rootScope');
-      scope.$broadcast('HorizonRewindState',{enabled:true,phase:'rewinding',availableSeconds:42,maxSeconds:60,speed:2,trafficEnabled:true,trafficCount:3});scope.$digest();
+      scope.$broadcast('HorizonRewindState',{enabled:true,phase:'rewinding',availableSeconds:42,maxSeconds:60,speed:2,trafficEnabled:true,trafficCount:2,trafficLimit:2});scope.$digest();
     });
     assert(await page.getByRole('button',{name:'60 s',exact:true}).isDisabled());
     assert(await page.getByRole('checkbox',{name:'Rewind active traffic',exact:true}).isDisabled());
+    assert(await limits.getByRole('button',{name:'2',exact:true}).isDisabled());
+    assert.equal(await limits.getByRole('button',{name:'2',exact:true}).getAttribute('aria-pressed'),'true');
     assert.equal(await page.getByRole('button',{name:'60 s',exact:true}).getAttribute('aria-pressed'),'true');
     const panel=page.locator('.hr-app');
     assert(await panel.evaluate(e=>e.scrollWidth<=e.clientWidth),'Options overflow horizontally');

@@ -75,9 +75,14 @@
         <button type="button" ng-repeat="seconds in hrHistories" ng-click="hrSetHistory(seconds)" ng-disabled="hrOptionsLocked()" ng-attr-aria-pressed="{{hr.maxSeconds === seconds}}">{{seconds}} s</button>
       </div>
       <label class="hr-traffic-option"><input type="checkbox" ng-model="hr.trafficEnabled" ng-change="hrSetTraffic()" ng-disabled="hrOptionsLocked()">Rewind active traffic</label>
+      <div class="hr-duration" role="group" aria-label="Traffic car limit" ng-show="hr.trafficEnabled">
+        <span>Nearby cars</span>
+        <button type="button" ng-repeat="limit in hrTrafficLimits" ng-click="hrSetTrafficLimit(limit)" ng-disabled="hrOptionsLocked()" ng-attr-aria-pressed="{{hr.trafficLimit === limit}}">{{limit === 0 ? 'All' : limit}}</button>
+      </div>
       <label class="hr-traffic-option"><input type="checkbox" ng-model="hr.audioEnabled" ng-change="hrSetAudio()">Rewind sound effect</label>
       <p class="hr-option-note">Longer history uses more memory. Traffic adds recording and restore work for each car. Changing history length clears the buffer.</p>
       <p class="hr-option-note" ng-show="hr.trafficEnabled">Newly spawned traffic won't shorten your history.</p>
+      <p class="hr-option-note" ng-show="hr.trafficEnabled && hr.trafficLimit">Up to {{hr.trafficLimit}} nearby cars rewind. Other cars stay at their current positions.</p>
     </div>
     <div ng-show="!hrOptionsOpen">
     <div class="hr-readout">

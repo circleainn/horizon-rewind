@@ -1,3 +1,18 @@
+# Horizon Rewind 0.1.6
+
+Experimental update by circleainn for BeamNG.drive 0.39.4.0.
+
+- Added optional traffic recording limits: 2, 4, 8 or All active AI cars. Find
+  **Nearby cars** in Options after enabling traffic rewind. All remains the default.
+- Limited recording prefers nearby cars and keeps existing recorders when
+  distances are similar, avoiding frequent history loss as cars move around.
+- Changing the limit preserves player history and cars that remain selected.
+  The setting is saved and locked during rewind and restoration.
+
+Unrecorded cars stay at their current positions during rewind and may be in your
+path on release. Lower limits bound how many traffic cars are recorded/restored;
+they do not guarantee a particular frame rate.
+
 # Horizon Rewind 0.1.5
 
 Experimental update by circleainn for BeamNG.drive 0.39.4.0.

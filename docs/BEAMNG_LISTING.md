@@ -1,7 +1,7 @@
 # Horizon Rewind
 
 **Author:** circleainn  
-**Version:** 0.1.5 — experimental
+**Version:** 0.1.6 — experimental
 
 **Tagline:** Hold recovery to rewind your car. Release to drive again.  
 **Upload:** `horizon_rewind_circleainn.zip` from the GitHub release, not GitHub's source-code ZIP.
@@ -30,6 +30,7 @@ choices open inside the app, without a native browser dropdown.
 
 - 20 seconds of history by default, with optional 40/60-second buffers.
 - Optional rewind for active AI traffic cars; newly spawned stock traffic preserves your history.
+- Optional traffic recording limits of 2, 4 or 8 nearby cars; All remains the default.
 - A speed-sensitive rewind sound effect with a mute option; this is not reversed game audio.
 - Visible backward motion, wheel rotation and recorded body deformation.
 - Restoration of supported damage, panel latches, motion and drivetrain state.
@@ -59,6 +60,8 @@ be repaired by the reset used during restoration. Stock particles,
 Enhanced Vehicle Effects particles, skid marks and other world systems do not
 rewind. Traffic cars disappear before their recorded arrival and return to their
 pool on release. Custom/manual AI outside that pool still limits shared history.
+When recording is limited, unrecorded cars stay at their current positions during
+rewind and may be in your path when driving resumes.
 AI routes are replanned, and deleted cars are not recreated. BeamNG's saved replay feature remains separate; live rewind is unavailable
 while replay recording or playback is active.
 

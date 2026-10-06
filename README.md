@@ -1,6 +1,6 @@
 # Horizon Rewind
 
-**by circleainn · Experimental 0.1.5 · BeamNG.drive 0.39.4.0**
+**by circleainn · Experimental 0.1.6 · BeamNG.drive 0.39.4.0**
 
 Hold your vehicle recovery control to rewind your car. Release to drive again.
 Horizon Rewind records 20 seconds of player-car history automatically in singleplayer Freeroam. Longer history and traffic rewind are optional.
@@ -24,8 +24,14 @@ the panel. The view is remembered; keyboard recovery still works while hidden.
 
 Open **Options** to select **20, 40 or 60 seconds**, enable **Rewind active traffic**,
 or turn off the **rewind sound effect**. Settings are saved. Defaults are 20 seconds
-and traffic off. Changing history length clears the buffer; these two options
-cannot change during rewind.
+and traffic off. Changing history length clears the buffer. History and traffic
+settings cannot change during rewind.
+
+With traffic enabled, **Nearby cars** can limit recording to **2, 4 or 8** active
+AI cars. **All** is the default. Nearby cars are preferred, with some tolerance
+to keep existing history when distances are similar. Changing the limit preserves
+your car's history and the buffers of cars that remain selected. Unrecorded cars
+stay at their current positions during rewind and may be in your path on release.
 
 Traffic rewind records the physical state of currently active AI traffic cars,
 including position, deformation, wheels and momentum, and resumes the group

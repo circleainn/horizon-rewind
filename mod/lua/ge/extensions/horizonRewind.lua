@@ -12,6 +12,8 @@ local pauseOwned, wasPaused, disableAfterRestore = false, false, false
 local elapsed, heartbeat, sentSeconds = 0, 0, 0
 local maxSeconds = 20
 local trafficEnabled, trafficWait = false, 0
+local trafficLimit=0
+local trafficLimits={[0]=true,[2]=true,[4]=true,[8]=true}
 local audioEnabled = true
 local recoveryHeld, recoveryTime, recoveryPending = false, 0, false
 local recoveryDelay = 0.7 -- Stock recovery.lua uses this tap/hold threshold.
@@ -36,7 +38,7 @@ end
 local function saveSettings()
   if type(jsonWriteFile) == 'function' then
     local ok, result = pcall(jsonWriteFile, settingsPath,
-      {speed=speed, maxSeconds=maxSeconds, trafficEnabled=trafficEnabled, audioEnabled=audioEnabled}, true)
+      {speed=speed, maxSeconds=maxSeconds, trafficEnabled=trafficEnabled, trafficLimit=trafficLimit, audioEnabled=audioEnabled}, true)
     if not ok or result == false then log('W', 'horizonRewind', 'Could not save rewind settings.') end
   end
 end
@@ -63,6 +65,7 @@ local function loadSettings()
     local seconds = tonumber(data.maxSeconds)
     if seconds == 20 or seconds == 40 or seconds == 60 then maxSeconds = seconds end
     trafficEnabled = data.trafficEnabled == true
+    if trafficLimits[tonumber(data.trafficLimit)] then trafficLimit=tonumber(data.trafficLimit) end
     audioEnabled = data.audioEnabled ~= false
   end
 end
@@ -87,6 +90,7 @@ local function publish()
     availableSeconds = available, rewindSeconds = rewindSeconds,
     maxSeconds = maxSeconds, speed = speed, message = message,
     trafficEnabled = trafficEnabled, trafficCount = trafficCount,
+    trafficLimit=trafficLimit,
     audioEnabled = audioEnabled,
     damageMode = 'experimental'})
 end
@@ -172,6 +176,7 @@ local function attach(car)
   failedEffects = {}
   effectsCall('configure', vehicleId, session, maxSeconds)
   trafficCall('configure', vehicleId, trafficEnabled, maxSeconds)
+  trafficCall('setLimit',trafficLimit)
   phase, message = 'recording', 'Hold your recovery control to rewind.'
   car:queueLuaCommand("extensions.load('horizonRewindEffects'); extensions.load('horizonRewindFluids'); extensions.load('horizonRewindTires'); extensions.load('horizonRewindMaterials'); extensions.load('horizonRewindTransmission'); extensions.load('horizonRewindDirt'); extensions.load('horizonRewindVehicle'); extensions.horizonRewindVehicle.configure("..session..',true,'..maxSeconds..')')
   car:queueLuaCommand("extensions.load('horizonRewindRecovery'); extensions.horizonRewindRecovery.configure("..session..',true)')
@@ -300,6 +305,17 @@ local function setTrafficEnabled(value)
   saveSettings()
   trafficCall('configure', vehicleId, enabled and trafficEnabled, maxSeconds)
   message = value and 'Traffic rewind enabled.' or 'Rewinding the player car only.'
+  publish()
+end
+
+local function setTrafficLimit(value)
+  if not trafficLimits[value] then return end
+  if phase=='rewinding' or phase=='restoring' or recoveryHeld or recoveryPending then return end
+  if trafficLimit==value then publish();return end
+  trafficLimit=value
+  saveSettings()
+  trafficCall('setLimit',value)
+  trafficCall('update',1)
   publish()
 end
 
@@ -543,6 +559,7 @@ local function onClientEndMission()
 end
 
 M.setEnabled, M.beginRewind, M.endRewind = setEnabled, beginRewind, endRewind
+M.setTrafficLimit=setTrafficLimit
 M.cancelRewind, M.setSpeed, M.requestState = cancelRewind, setSpeed, publish
 M.setHistorySeconds, M.setTrafficEnabled = setHistorySeconds, setTrafficEnabled
 M.setAudioEnabled = function(value)

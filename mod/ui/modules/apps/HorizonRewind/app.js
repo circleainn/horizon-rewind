@@ -27,6 +27,7 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
         speed: 2,
         trafficEnabled: false,
         trafficCount: 0,
+        trafficLimit: 0,
         audioEnabled: true,
         message: 'Loading rewind…',
         damageMode: 'experimental'
@@ -36,6 +37,7 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
       scope.hrSpeedOpen = false;
       scope.hrOptionsOpen = false;
       scope.hrHistories = [20, 40, 60];
+      scope.hrTrafficLimits = [2, 4, 8, 0];
       scope.hrView = 'full';
       try {
         var savedView = $window.localStorage.getItem('horizonRewind.view');
@@ -67,6 +69,10 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
         send('setTrafficEnabled(' + (scope.hr.trafficEnabled ? 'true' : 'false') + ')');
       };
       scope.hrSetAudio = function () { send('setAudioEnabled(' + (scope.hr.audioEnabled ? 'true' : 'false') + ')'); };
+      scope.hrSetTrafficLimit = function (limit) {
+        if (scope.hrOptionsLocked() || scope.hrTrafficLimits.indexOf(limit) === -1) return;
+        send('setTrafficLimit(' + limit + ')');
+      };
 
       function send(command) {
         bngApi.engineLua("if not extensions.horizonRewind then extensions.load('horizonRewind') end if extensions.horizonRewind then extensions.horizonRewind." + command + ' end');
@@ -151,6 +157,7 @@ angular.module('beamng.apps').directive('horizonRewind', ['$window', '$document'
           scope.hr.speed = finite(state.speed, 2);
           scope.hr.trafficEnabled = state.trafficEnabled === true;
           scope.hr.trafficCount = Math.max(0, finite(state.trafficCount, 0));
+          scope.hr.trafficLimit = scope.hrTrafficLimits.indexOf(state.trafficLimit) !== -1 ? state.trafficLimit : 0;
           scope.hr.audioEnabled = state.audioEnabled !== false;
           scope.hr.message = typeof state.message === 'string' ? state.message : '';
           scope.hr.damageMode = state.damageMode || 'experimental';
