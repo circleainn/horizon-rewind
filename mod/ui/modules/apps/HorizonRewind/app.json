@@ -12,7 +12,7 @@
     "min-height": "180px"
   },
   "author": "circleainn",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "directive": "horizonRewind",
   "category": "Gameplay",
   "isAuxiliary": false,

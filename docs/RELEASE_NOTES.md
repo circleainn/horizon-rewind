@@ -1,3 +1,20 @@
+# Horizon Rewind 0.1.5
+
+Experimental update by circleainn for BeamNG.drive 0.39.4.0.
+
+- Releasing rewind no longer dispatches an extra catch-up seek after a delayed
+  vehicle response. The preview already in flight completes before restoration.
+- Impact release chooses the nearest complete recorded frame instead of always
+  choosing the earlier one. This halves the maximum time adjustment across a
+  fracture interval (normally 25 ms instead of 50 ms). Geometry, broken beams,
+  mass, momentum and drivetrain state come from that same recorded frame.
+- Reset/teleport boundaries keep their existing protection. Continuous movement
+  still releases at its interpolated pose, and traffic still waits for the group
+  before physics resumes.
+
+Focused native fracture checks and the collision regression passed. This reduces
+release jumps; it does not eliminate every adjustment or mesh-reconnection pop.
+
 # Horizon Rewind 0.1.4
 
 Experimental update by circleainn for BeamNG.drive 0.39.4.0.

@@ -483,7 +483,7 @@ test('reset and error terminate an operation and reject phase-stale acks', funct
   h.tick(); eq(h.state().enabled, false); eq(h.state().phase, 'error')
 end)
 
-test('rewind wall-clock speed survives acknowledgment latency and final release', function()
+test('held rewind catches up after latency but release never adds another seek', function()
   local h = harness()
   h.record(); h.begin(); h.tick(0.25)
   eq(h.lastCommand().method, 'seek'); near(tonumber(h.lastCommand().args:sub(2)), 0.5)
@@ -491,8 +491,6 @@ test('rewind wall-clock speed survives acknowledgment latency and final release'
   h.send('previewed'); h.tick(0.25)
   near(tonumber(h.lastCommand().args:sub(2)), 2)
   h.tick(0.25); h.mod.endRewind(); h.send('previewed'); h.tick()
-  eq(h.lastCommand().method, 'seek'); near(tonumber(h.lastCommand().args:sub(2)), 2.5)
-  h.send('previewed'); h.tick()
   eq(h.lastCommand().method, 'finish'); eq(h.lastCommand().args, ',false')
   h.restore(false); eq(h.paused, false)
 end)

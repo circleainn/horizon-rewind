@@ -1,4 +1,30 @@
-# Horizon Rewind — prototype 0.1.4
+# Horizon Rewind — prototype 0.1.5
+
+## 0.1.5 update
+
+Release freezes the requested cursor at `sentSeconds`. Previously, wall time
+accumulated while a seek was pending could cause another seek after the user
+released the control, moving the car farther before restoration. In-flight
+commands still finish, preserving the existing publication and traffic barriers.
+Native recovery release and the UI both use this path; cancellation is unchanged.
+
+At a broken-beam boundary, physical frame selection now chooses the nearest
+endpoint, with ties going to the earlier frame. It retains the entire immutable
+sample, including geometry, mass, momentum and mechanical state. The maximum
+time correction is half the recorded interval, normally 25 ms at 20 Hz; dropped
+capture frames can make that interval longer. No nodes are moved into an invented
+physical fracture state. Reset segments and teleport guards still select the
+earlier frame because their preview is already discrete.
+
+Validation on 2026-10-06: core specs cover delayed release without an extra seek,
+seven release positions around a fracture including the midpoint, and consistent
+node/beam/mass/gear/velocity selection. The console-physics suite now checks eight
+restore flows. Its two added native fractures verify both sides of the boundary,
+recorded position and broken-beam state, reduced late-interval node correction,
+and no extra breaks after physics resumes. In the late-side case, actual RMS node
+movement on release was 0.166 m versus 0.449 m from the preview to the earlier
+candidate. Native reset still contributes some node adjustment, so seamless
+restoration of every node is not claimed.
 
 ## 0.1.4 update
 
@@ -201,7 +227,7 @@ BeamNG's saved-replay feature remains separate and unaffected. Live rewind is un
 
 ## Prototype limits
 
-**This is not yet a complete Forza-quality visual damage rewind.** Node geometry moves backward while held, but broken mesh connections, hidden/detached props and other damage visuals are rebuilt on release. Those transitions may pop. Continuous motion releases at the interpolated pose and velocity; fracture boundaries use the preceding complete physical sample.
+**This is not yet a complete Forza-quality visual damage rewind.** Node geometry moves backward while held, but broken mesh connections, hidden/detached props and other damage visuals are rebuilt on release. Those transitions may pop. Continuous motion releases at the interpolated pose and velocity; fracture boundaries use the nearest complete physical sample.
 
 Stock engine particles, skid marks, recorded game audio, missions, timers, AI decisions and the rest of the world do not rewind. Traffic physical rewind is optional. Supported effect mods are covered separately below. Untracked vehicles remain at their current positions while the simulation is paused.
 

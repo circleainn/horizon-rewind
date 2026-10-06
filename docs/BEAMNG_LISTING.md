@@ -1,7 +1,7 @@
 # Horizon Rewind
 
 **Author:** circleainn  
-**Version:** 0.1.4 — experimental
+**Version:** 0.1.5 — experimental
 
 **Tagline:** Hold recovery to rewind your car. Release to drive again.  
 **Upload:** `horizon_rewind_circleainn.zip` from the GitHub release, not GitHub's source-code ZIP.
@@ -91,7 +91,7 @@ with BeamNG GmbH, Microsoft, Playground Games or Turn 10 Studios.
 ## Submission notes — omit this section from the public overview
 
 Choose the appropriate gameplay/utility category in the current upload form.
-Use version 0.1.4 and keep the ZIP filename unchanged for future updates.
+Use version 0.1.5 and keep the ZIP filename unchanged for future updates.
 Add at least two real in-game images showing the car during rewind and the
 optional controls; a short gameplay clip would also help demonstrate the feature.
 Do not present a mockup as a gameplay screenshot. Capture these after a rendered

@@ -233,7 +233,12 @@ local function beginRewind()
   publish()
 end
 
-local function endRewind() held = false end
+local function endRewind()
+  held = false
+  -- Finish the preview already sent to the vehicle, without dispatching an
+  -- extra catch-up seek for wall time accumulated while that command was busy.
+  if phase=='rewinding' then rewindSeconds=sentSeconds end
+end
 local function cancelRewind()
   if phase == 'rewinding' then held, cancelRequested = false, true end
 end

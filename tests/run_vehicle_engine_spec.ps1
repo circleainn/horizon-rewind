@@ -12,7 +12,7 @@ Push-Location -LiteralPath $GameRoot
 try {
   $output = & (Join-Path $GameRoot 'Bin64/console.x64.exe') file $target 2>&1
   $output | ForEach-Object { Write-Output $_ }
-  if ($LASTEXITCODE -ne 0 -or ($output -match 'FATAL LUA ERROR') -or -not ($output -match 'ENGINE_SPEC_DONE restoreCount=6 expectedErrors=1')) {
+  if ($LASTEXITCODE -ne 0 -or ($output -match 'FATAL LUA ERROR') -or -not ($output -match 'ENGINE_SPEC_DONE restoreCount=8 expectedErrors=1')) {
     throw 'Vehicle engine integration failed; inspect the preceding log.'
   }
 }

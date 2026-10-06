@@ -230,4 +230,73 @@ queue([[
   assert((vec3(obj:getVelocity())-integrationState.abortVelocity):length()<1,'Runtime error abort lost momentum')
   print('ENGINE_RUNTIME_ERROR_ABORT_VELOCITY_PASSED')
 ]])
+-- Keep the actual immutable recorder frames available to this test. This
+-- wrapper is test-only; the shipped module has no debug capture interface.
+queue([[
+  local H=package.loaded['horizonRewind/history'];local create=H.new
+  H.new=function(...) integrationHistory=create(...);return integrationHistory end
+]])
+for _,alpha in ipairs({.25,.75}) do
+  queue('obj:requestReset(RESET_PHYSICS)',0,24)
+  queue([[
+    obj:setGravity(0);obj:setGhostEnabled(true)
+    extensions.horizonRewindVehicle.configure(77,true)
+    for _,node in pairs(v.data.nodes) do
+      obj:applyForceVector(node.cid,(vec3(12,0,0)-vec3(obj:getNodeVelocityVector(node.cid)))*(obj:getNodeMass(node.cid)/physicsDt))
+    end
+  ]],.0005,8)
+  pump(.01,30)
+  queue([[
+    integrationBefore=integrationHistory:latest()
+    obj:breakBeam(2)
+  ]])
+  pump(.01,6)
+  queue(string.format([[
+    local a,b=integrationHistory:bracket(integrationBefore.time+.00001)
+    assert(a.topology~=b.topology,'Test did not cross a real native fracture')
+    integrationExpected=%f>.5 and b or a
+    integrationAlpha=%f
+    extensions.horizonRewindVehicle.begin(77)
+    extensions.horizonRewindVehicle.seek(77,integrationHistory:latest().time-(a.time+(b.time-a.time)*integrationAlpha))
+    integrationPreview={};integrationOldCorrection=0
+    local ids={};for _,node in pairs(v.data.nodes) do ids[#ids+1]=node.cid end;table.sort(ids)
+    integrationNodeIds=ids
+    for i,cid in ipairs(ids) do
+      local p=vec3(obj:getPosition())+vec3(obj:getNodePosition(cid));integrationPreview[i]=p
+      local k=(i-1)*7
+      integrationOldCorrection=integrationOldCorrection+(p-vec3(a.origin[1]+a.nodes[k],a.origin[2]+a.nodes[k+1],a.origin[3]+a.nodes[k+2])):squaredLength()
+    end
+    extensions.horizonRewindVehicle.finish(77,false)
+  ]],alpha,alpha),0,24)
+  queue([[
+    local f=integrationExpected;local correction=0;local broken=0;local maxError,maxCid=0,0
+    for i,cid in ipairs(integrationNodeIds) do
+      local p=vec3(obj:getPosition())+vec3(obj:getNodePosition(cid));local k=(i-1)*7
+      local expected=vec3(f.origin[1]+f.nodes[k],f.origin[2]+f.nodes[k+1],f.origin[3]+f.nodes[k+2])
+      local err=(p-expected):length();if err>maxError then maxError,maxCid=err,cid end
+      correction=correction+(p-integrationPreview[i]):squaredLength()
+    end
+    local beams={};for _,b in pairs(v.data.beams) do beams[#beams+1]=b.cid end;table.sort(beams)
+    for i,cid in ipairs(beams) do
+      assert(obj:beamIsBroken(cid)==(f.broken[i-1]==1),'Native release mixed broken-beam frames')
+      if obj:beamIsBroken(cid) then broken=broken+1 end
+    end
+    print('ENGINE_FRACTURE_NODE_ERROR '..maxError..' cid='..maxCid)
+    assert((vec3(obj:getPosition())-vec3(f.origin[1],f.origin[2],f.origin[3])):length()<.001,'Release used the wrong recorded position')
+    if integrationAlpha>.5 then
+      assert(correction<integrationOldCorrection*.2,'Nearest frame did not reduce actual node correction')
+    else
+      assert(math.sqrt(correction/#integrationNodeIds)<math.sqrt(integrationOldCorrection/#integrationNodeIds)+.02,'Earlier-side release correction regressed')
+    end
+    integrationExpectedBroken=broken
+    print('ENGINE_FRACTURE_RELEASE alpha='..integrationAlpha..' rmsCorrection='..math.sqrt(correction/#integrationNodeIds)..' previous='..math.sqrt(integrationOldCorrection/#integrationNodeIds))
+  ]])
+  pump(.0005,20)
+  queue([[
+    local broken=0;for _,b in pairs(v.data.beams) do if obj:beamIsBroken(b.cid) then broken=broken+1 end end
+    assert(broken==integrationExpectedBroken,'Release introduced extra broken beams')
+    assert(obj:getVelocity():length()<20,'Fracture release launched the car')
+  ]])
+end
+assert(restoreCount==8 and errorCount==1,'Unexpected fracture restore/error count')
 print('ENGINE_SPEC_DONE restoreCount='..restoreCount..' expectedErrors='..errorCount)

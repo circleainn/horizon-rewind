@@ -1,6 +1,6 @@
 # Horizon Rewind
 
-**by circleainn · Experimental 0.1.4 · BeamNG.drive 0.39.4.0**
+**by circleainn · Experimental 0.1.5 · BeamNG.drive 0.39.4.0**
 
 Hold your vehicle recovery control to rewind your car. Release to drive again.
 Horizon Rewind records 20 seconds of player-car history automatically in singleplayer Freeroam. Longer history and traffic rewind are optional.
@@ -54,9 +54,12 @@ To uninstall, close the game and remove the ZIP. Installation does not change ga
 Rewind follows recorded node positions, body deformation and wheel rotation. On release it restores supported damage, door/hood/trunk latches, momentum and drivetrain state while preserving current controls and the camera selection.
 
 Crash deformation interpolates during preview. Releasing between samples with
-different broken beams uses the earlier complete physical frame, which can cause
+different broken beams uses the nearest complete physical frame, which can cause
 a small adjustment at the impact boundary. Traffic previews update independently
 and synchronize before physics resumes.
+
+Releasing finishes the preview already in flight without adding another
+catch-up seek for accumulated input time.
 
 Stock damage-material switches, including supported cracked and shattered glass
 materials, now follow the preview timeline. Dynamic Damage Particles' flying

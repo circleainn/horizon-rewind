@@ -221,11 +221,20 @@ test('player resets still clear history',function()
   assert(events.reset.availableSeconds==0)
 end)
 test('fracture preview interpolates but release restores a complete physical frame',function()
-  local _,env,state,module,events=fixture()
-  state.broken=true;state.nodes={vector(50,0,0),vector(-10,0,0)}
-  module.updateGFX(.1);module.begin(1);module.seek(1,.025)
-  assert(state.nodes[1].x>0 and state.nodes[1].x<50,'Crash preview skipped the deformation between samples')
-  module.finish(1,false);module.executeRestore(1);module.onReset();module.completeRestore(1)
-  assert(not state.broken and state.nodes[2].x==1,'Release restored inconsistent beam state')
+  for _,alpha in ipairs({.05,.25,.49,.5,.51,.75,.95}) do
+    local gear={gearIndex=2,setGearIndex=function(self,index) self.gearIndex=index end}
+    local _,env,state,module,events=fixture({powertrain={getDevices=function() return {gearbox=gear} end}})
+    state.broken=true;state.mass=3;gear.gearIndex=5
+    state.velocity=vector(30,0,0);state.nodes={vector(50,0,0),vector(-10,0,0)}
+    module.updateGFX(.1);module.begin(1);module.seek(1,.1*(1-alpha))
+    local preview=state.nodes[1].x
+    assert(preview>0 and preview<50,'Crash preview skipped the deformation between samples')
+    module.finish(1,false);module.executeRestore(1);module.onReset();module.completeRestore(1)
+    local later=alpha>.5
+    assert(state.broken==later and state.nodes[2].x==(later and -10 or 1),'Release mixed physical frame geometry and beams')
+    assert(state.mass==(later and 3 or 2) and gear.gearIndex==(later and 5 or 2),'Mass or drivetrain came from the other frame')
+    assert(events.restored.velocity[1]==(later and 30 or 0),'Momentum came from the other frame')
+    assert(math.abs(state.nodes[1].x-preview)<=25.00001,'Release correction exceeded half the sample interval')
+  end
 end)
 print('VEHICLE_OPTIONAL_SPEC_DONE '..count)
