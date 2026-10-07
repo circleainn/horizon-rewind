@@ -1,7 +1,7 @@
 # Horizon Rewind
 
 **Author:** circleainn  
-**Version:** 0.1.6 — experimental
+**Version:** 0.1.7 — experimental
 
 **Tagline:** Hold recovery to rewind your car. Release to drive again.  
 **Upload:** `horizon_rewind_circleainn.zip` from the GitHub release, not GitHub's source-code ZIP.
@@ -38,7 +38,7 @@ choices open inside the app, without a native browser dropdown.
 - Arcade and Realistic gear restoration, including both shafts of supported DCTs.
 - Automatic setup when changing cars; no individual vehicle configuration.
 - Automatic optional support for Detachable Tires 1.2, Tire Impact Punctures 1.4,
-  Dynamic Damage Particles 2.0, Fluid Spill Mod 1.3.0 and Grime 2.0.
+  Dynamic Damage Particles 2.0, Fluid Spill Mod 1.3.0 and Grime 2.0 / 2.2.
 
 These optional mods are not included or required. Compatibility is limited to
 supported versions and data layouts. Fluid Spill compatibility rewinds its world

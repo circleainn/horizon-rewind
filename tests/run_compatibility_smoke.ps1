@@ -1,4 +1,5 @@
-param([string]$GameRoot='C:\Steam\steamapps\common\BeamNG.drive')
+param([string]$GameRoot='C:\Steam\steamapps\common\BeamNG.drive',
+  [string]$GrimeArchive=(Join-Path $env:LOCALAPPDATA 'BeamNG/BeamNG.drive/current/mods/repo/whytey_grime_dynamic_dirt.zip'))
 $ErrorActionPreference='Stop'
 $workspace=Split-Path -Parent $PSScriptRoot
 $userRoot=Join-Path ([IO.Path]::GetTempPath()) ('horizon-rewind-compatibility-'+(Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -6,9 +7,8 @@ $current=Join-Path $userRoot 'current'
 $modRoot=Join-Path $current 'mods/unpacked/horizon_rewind'
 New-Item -ItemType Directory -Path $modRoot -Force | Out-Null
 Copy-Item -Path (Join-Path $workspace 'mod/*') -Destination $modRoot -Recurse
-$grime=Join-Path $env:LOCALAPPDATA 'BeamNG/BeamNG.drive/current/mods/repo/whytey_grime_dynamic_dirt.zip'
 New-Item -ItemType Directory -Path (Join-Path $current 'mods/repo') -Force | Out-Null
-Copy-Item -LiteralPath $grime -Destination (Join-Path $current 'mods/repo')
+Copy-Item -LiteralPath $GrimeArchive -Destination (Join-Path $current 'mods/repo/whytey_grime_dynamic_dirt.zip')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'horizonRewindCompatibilitySmoke.lua') -Destination (Join-Path $modRoot 'lua/ge/extensions/horizonRewindCompatibilitySmoke.lua')
 $script=Join-Path $modRoot 'scripts/horizonRewindCompatibilitySmoke'
 New-Item -ItemType Directory -Path $script -Force | Out-Null

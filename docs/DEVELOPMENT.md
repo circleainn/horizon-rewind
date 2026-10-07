@@ -1,4 +1,20 @@
-# Horizon Rewind — prototype 0.1.6
+# Horizon Rewind — prototype 0.1.7
+
+## 0.1.7 update
+
+Grime's repository update to 2.2 replaced the installed 2.0 archive. The user's
+live session logged missing bootstrap, core, skin and learner scripts after the
+update, although those entries were present in the ZIP. A fresh isolated game
+loaded Grime's own canvas successfully, then exposed our separate 2.0-only
+version rejection. The adapter now explicitly accepts 2.0 and reviewed 2.2,
+retaining the resource-ID and runtime-schema checks. The recorded core layout
+is unchanged; 2.2 removes the old scratch guest path, which we never supported.
+
+Validation on 2026-10-07: reproduced the version rejection, verified Grime 2.2
+preview/cancel/commit in the native engine, and checked its four actual canvas
+renderers in Edge. The compatibility smoke now relies on Grime's normal startup
+instead of explicitly loading its vehicle modules, and accepts a candidate ZIP
+path for checking local paint patches without installing them first.
 
 ## 0.1.6 update
 

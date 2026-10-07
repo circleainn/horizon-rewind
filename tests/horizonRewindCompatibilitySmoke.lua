@@ -25,7 +25,8 @@ local function update(real,sim)
     mod.onVehicleMessage=function(id,token,event,data) original(id,token,event,data);events[event]=data or {} end
     advance('ready')
   elseif phase=='ready' and timer>6 then
-    command([[extensions.load('dynamicDirtCore');extensions.load('dynamicDirtSkin');hrDirtCalls={};local html=require('htmlTexture');local original=html.call;html.call=function(tag,method,data) hrDirtCalls[method]=(hrDirtCalls[method] or 0)+1;return original(tag,method,data) end]])
+    assert(extensions.dynamicDirt or rawget(_G,'dynamicDirt'),'Grime did not load at startup')
+    command([[hrDirtCalls={};local html=require('htmlTexture');local original=html.call;html.call=function(tag,method,data) hrDirtCalls[method]=(hrDirtCalls[method] or 0)+1;return original(tag,method,data) end]])
     inspect();advance('cleanReply')
   elseif phase=='cleanReply' and reply then
     results.clean=reply

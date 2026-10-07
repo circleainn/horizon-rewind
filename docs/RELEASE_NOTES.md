@@ -1,3 +1,18 @@
+# Horizon Rewind 0.1.7
+
+Experimental update by circleainn for BeamNG.drive 0.39.4.0.
+
+- Added verified Grime 2.2 compatibility for recorded dirt/mud and window film.
+  Grime 2.0 remains supported. Unknown versions and incompatible state layouts
+  still leave the adapter inactive.
+- Confirmed clean preview, dirty cancellation and clean commit with Grime 2.2,
+  plus atomic repainting of body, roughness and glass canvases.
+
+If dirt disappears immediately after an in-game Grime update, fully exit BeamNG
+and start it again. The observed live update left Grime scripts unavailable;
+the same archive loaded correctly in a fresh session. Rewind compatibility does
+not enable Grime paint automatically or bundle its files.
+
 # Horizon Rewind 0.1.6
 
 Experimental update by circleainn for BeamNG.drive 0.39.4.0.

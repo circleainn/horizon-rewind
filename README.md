@@ -1,6 +1,6 @@
 # Horizon Rewind
 
-**by circleainn · Experimental 0.1.6 · BeamNG.drive 0.39.4.0**
+**by circleainn · Experimental 0.1.7 · BeamNG.drive 0.39.4.0**
 
 Hold your vehicle recovery control to rewind your car. Release to drive again.
 Horizon Rewind records 20 seconds of player-car history automatically in singleplayer Freeroam. Longer history and traffic rewind are optional.
@@ -99,7 +99,7 @@ These integrations activate automatically for supported versions and data layout
 | Tire Impact Punctures 1.4 | Supported pressure and puncture state |
 | Dynamic Damage Particles 2.0 | Player-owned Lua debris, including flying glass shards, and sparks |
 | Fluid Spill Mod 1.3.0 | Sampled fluid effects and supported reservoir state |
-| Grime 2.0 | Recorded panel dirt/mud and window film with Grime paint selected |
+| Grime 2.0 / 2.2 | Recorded panel dirt/mud and window film with Grime paint selected |
 
 Fluid Spill combines effects without retaining vehicle ownership, so its integration rewinds **world fluid state**, including fluid left by other cars. Unknown compatibility layouts remain inactive. Full limits are documented in the development notes.
 
@@ -107,6 +107,10 @@ Grime's textures are rebuilt from recorded buildup. Individual speckles and mixe
 soil colors are approximate; separate window splashes and burn marks are not
 rewound. Grime paint and its own texture canvas must be active. The integration
 does not alter paint materials or require installing Grime.
+
+If Grime stops appearing after an in-game repository update, fully exit BeamNG
+and reopen it before troubleshooting the paint selection. A live update can leave
+Grime's scripts unavailable for the rest of that session.
 
 ## Build
 

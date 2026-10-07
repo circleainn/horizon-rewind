@@ -1,12 +1,13 @@
 -- Horizon Rewind by circleainn. See LICENSE.txt for usage and redistribution terms.
--- Optional Grime 2.0 integration. No third-party source or assets are bundled.
+-- Optional Grime 2.0 / 2.2 integration. No third-party source or assets are bundled.
 local M = {}
 local ffi = require('ffi')
 local Compat = require('horizonRewind/fluidCompat')
 local Canvas = require('horizonRewind/dirtCanvas')
 local core, skin, coreRefs, skinRefs, layout, cached, shown
 local hooks, rewinding, lastCapture = {}, false, -math.huge
-local reason = 'Grime 2.0 is not loaded.'
+local reason = 'Grime is not loaded.'
+local supportedVersions={['2.0']=true,['2.2']=true}
 local visualKey,visualUpdates=nil,0
 local scalarFields = {'rotate','clock','sendAcc','waterZ','mudZ','mudSeen','sinkSeen',
   'sinkHold','sinkSoft','splashN'}
@@ -46,7 +47,7 @@ local function discover()
     detach()
     if type(c) ~= 'table' or type(s) ~= 'table' then return false end
     local info = type(jsonReadFile)=='function' and jsonReadFile('mod_info/M76NCDKVR/info.json')
-    if type(info)~='table' or info.version_string~='2.0' or info.resource_id~=39586 then
+    if type(info)~='table' or not supportedVersions[info.version_string] or info.resource_id~=39586 then
       reason = 'Unsupported Grime version.'; return false
     end
     local cr = Compat.discover(c, {'updateGFX','nodeState','surface'},
